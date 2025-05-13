@@ -41,16 +41,17 @@ const App = () => {
     </div> */
     <div className="flex h-screen bg-gray-100">
       <div className="flex flex-col flex-1 overflow-y-auto">
+      <h1 className="text-2xl font-bold">Plancia!</h1>
         <div className="p-4 planciaHolder flex-grow">
-          <h1 className="text-2xl font-bold">Plancia!</h1>
-          <div className="mt-2 text-gray-600 ">
+          
+          
             <Plancia
               carte={carte}
               onUpdatePosizione={aggiornaPosizione}
               onRimuovi={rimuoviCarta}
               onRuota={aggiornaAngolo}
             />
-          </div>
+          
         </div>
         <div className="p-4 barraCarte">
           <BarraCarte onAggiungiCarta={aggiungiCarta} />
