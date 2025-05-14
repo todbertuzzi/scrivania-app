@@ -18,6 +18,7 @@ const BarraCarte = ({ onAggiungiCarta }) => {
       x: 100 + Math.random() * 200,
       y: 100 + Math.random() * 200,
       angle: 0,
+      scale: 1.0,
     };
     onAggiungiCarta(nuovaCarta);
   };
