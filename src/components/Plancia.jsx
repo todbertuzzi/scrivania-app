@@ -72,7 +72,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
                 </div>
               </>
             )}
-            <Card className={`w-auto h-[150px] p-1 bg-white overflow-hidden ${controlliVisibili === carta.id ? 'ring-4 ring-blue-400 shadow-xl' : 'shadow-lg'}`}>
+            <Card angle={carta.angle} className={`w-auto h-[150px] p-1 bg-white overflow-hidden ${controlliVisibili === carta.id ? 'ring-4 ring-blue-400 shadow-xl' : 'shadow-lg'}`}>
               {carta.img ? (
                 <img
                   src={carta.img}
