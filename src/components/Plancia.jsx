@@ -26,7 +26,9 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
             dragConstraints={constraints}
             dragMomentum={false}
             initial={{ x: 10, y: 10 }}
-            animate={{ rotate: carta.angle || 0 }}
+            /* animate={{ rotate: carta.angle || 0 }} */
+            style={{ transform: `rotate(${carta.angle || 0}deg)`, position: 'absolute' }}
+            
             onDragStart={() => {
               if (controlliVisibili !== carta.id) setControlliVisibili(carta.id);
             }}

@@ -19,13 +19,10 @@ const App = () => {
   };
 
   const aggiornaAngolo = (id, nuovoAngolo) => {
-    console.log("nuovo angolo", nuovoAngolo);
-    setCarte(prev =>
-      prev.map(c =>
-        c.id === id
-          ? { ...c, angle: nuovoAngolo }
-          : c
-      )
+    const normalizzato = ((nuovoAngolo % 360) + 360) % 360;
+    console.log("nuovo angolo", normalizzato);
+    setCarte((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, angle: normalizzato } : c))
     );
   };
 
@@ -48,17 +45,14 @@ const App = () => {
     </div> */
     <div className="flex h-screen bg-gray-100">
       <div className="flex flex-col flex-1 overflow-y-auto">
-      <h1 className="text-2xl font-bold">Plancia!</h1>
+        <h1 className="text-2xl font-bold">Plancia!</h1>
         <div className="p-4 planciaHolder flex-grow">
-          
-          
-            <Plancia
-              carte={carte}
-              onUpdatePosizione={aggiornaPosizione}
-              onRimuovi={rimuoviCarta}
-              onRuota={aggiornaAngolo}
-            />
-          
+          <Plancia
+            carte={carte}
+            onUpdatePosizione={aggiornaPosizione}
+            onRimuovi={rimuoviCarta}
+            onRuota={aggiornaAngolo}
+          />
         </div>
         <div className="p-4 barraCarte">
           <BarraCarte onAggiungiCarta={aggiungiCarta} />
