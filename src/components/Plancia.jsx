@@ -6,6 +6,7 @@ import {
   faXmark,
   faRotate,
   faUpRightAndDownLeftFromCenter,
+  faToggleOff
 } from "@fortawesome/free-solid-svg-icons";
 
 const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
@@ -214,6 +215,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
             >
               {controlliVisibili === carta.id && (
                 <>
+                  {/* REMOVE BTN */}
                   <div className="absolute top-[-1.5rem] left-[-1.5rem] z-30">
                     <button
                       onClick={() => onRimuovi(carta.id)}
@@ -227,6 +229,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                       />
                     </button>
                   </div>
+                  {/* ROTATE BTN */}
                   <div className="absolute top-[-1.5rem] right-[-1.5rem] z-30">
                     <button
                       onMouseDown={(e) => {
@@ -265,7 +268,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                       />
                     </button>
                   </div>
-                 
+                 {/* SCALE BTN */}
                   <div className="absolute bottom-[-1.5rem] right-[-1.5rem] z-30">
                     <button
                       onMouseDown={(e) => {
@@ -290,6 +293,18 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                       aria-label="Ridimensiona carta"
                     >
                        <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} />
+                    </button>
+                  </div>
+
+                  {/* SWITCH BTN */}
+                  <div className="absolute bottom-[-1.5rem] left-[-1.5rem] z-30">
+                    <button
+                      
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="bg-white rounded-full shadow p-2"
+                      aria-label="Gira carta"
+                    >
+                       <FontAwesomeIcon icon={faToggleOff} />
                     </button>
                   </div>
                 </>
