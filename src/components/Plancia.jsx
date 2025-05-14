@@ -2,13 +2,18 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Card } from "../components/ui/Card";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faXmark, faRotate, faUpRightAndDownLeftFromCenter } from "@fortawesome/free-solid-svg-icons";
+import {
+  faXmark,
+  faRotate,
+  faUpRightAndDownLeftFromCenter,
+} from "@fortawesome/free-solid-svg-icons";
 
-const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
+const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
   const areaRef = useRef(null);
   const [constraints, setConstraints] = useState(null);
   const rotazioneInCorso = useRef(false);
+  const scalaInCorso = useRef(false);
 
   // Informazioni sulla rotazione corrente
   const rotazioneInfo = useRef({
@@ -22,6 +27,17 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
     ultimoAngolo: 0,
     lastUpdateTime: 0,
     sensibilita: 0.5, // Regola questa sensibilità per controllare quanto velocemente ruota la carta
+  });
+
+  // Informazioni sulla scala
+  const scalaInfo = useRef({
+    attiva: false,
+    cartaId: null,
+    startScale: 1.0,
+    startMouseY: 0,
+    lastUpdateTime: 0,
+    ultimaScala: 1.0,
+    sensibilita: 0.01,
   });
 
   // Funzione di gestione del movimento del mouse globale
@@ -93,18 +109,69 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
     rotazioneInCorso.current = false;
   }, []);
 
+  const handleGlobalMouseMoveScale = useCallback(
+    (e) => {
+      if (!scalaInfo.current.attiva) return;
+
+      const now = Date.now();
+      if (now - scalaInfo.current.lastUpdateTime < 16) return;
+
+      const { cartaId, startScale, startMouseY, sensibilita } =
+        scalaInfo.current;
+
+      // Calcola lo spostamento verticale del mouse (verso l'alto = zoom in, verso il basso = zoom out)
+      const deltaY = startMouseY - e.clientY;
+
+      // Calcola la nuova scala
+      let newScale = startScale + deltaY * sensibilita;
+
+      // Limita la scala a un intervallo ragionevole e arrotonda a 2 decimali
+      newScale = Math.max(0.5, Math.min(3.0, newScale));
+      newScale = Math.round(newScale * 100) / 100;
+
+      if (newScale === scalaInfo.current.ultimaScala) return;
+
+      scalaInfo.current.ultimaScala = newScale;
+      scalaInfo.current.lastUpdateTime = now;
+
+      // Aggiorna la scala della carta
+      onScala(cartaId, newScale);
+    },
+    [onScala]
+  );
+
+  // Funzione per gestire il rilascio del mouse durante la scala
+  const handleGlobalMouseUpScale = useCallback(() => {
+    scalaInfo.current.attiva = false;
+    scalaInCorso.current = false;
+  }, []);
+
   // Configura gli event listener globali una sola volta
   useEffect(() => {
-    // Aggiungi gli event listener globali
+    // I tuoi event listener per la rotazione...
     window.addEventListener("mousemove", handleGlobalMouseMove);
     window.addEventListener("mouseup", handleGlobalMouseUp);
 
-    // Rimuovi gli event listener quando il componente viene smontato
+    // Aggiungi gli event listener per la scala
+    window.addEventListener("mousemove", handleGlobalMouseMoveScale);
+    window.addEventListener("mouseup", handleGlobalMouseUpScale);
+
+    // Rimuovi tutti gli event listener quando il componente viene smontato
     return () => {
+      // Rimuovi gli event listener per la rotazione...
       window.removeEventListener("mousemove", handleGlobalMouseMove);
       window.removeEventListener("mouseup", handleGlobalMouseUp);
+
+      // Rimuovi gli event listener per la scala
+      window.removeEventListener("mousemove", handleGlobalMouseMoveScale);
+      window.removeEventListener("mouseup", handleGlobalMouseUpScale);
     };
-  }, [handleGlobalMouseMove, handleGlobalMouseUp]);
+  }, [
+    handleGlobalMouseMove,
+    handleGlobalMouseUp,
+    handleGlobalMouseMoveScale,
+    handleGlobalMouseUpScale,
+  ]);
 
   useEffect(() => {
     if (areaRef.current) {
@@ -122,7 +189,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
           <motion.div
             key={carta.id}
             className="absolute"
-            drag={!rotazioneInCorso.current}
+            drag={!rotazioneInCorso.current && !scalaInCorso.current}
             dragConstraints={constraints}
             dragMomentum={false}
             initial={{ x: carta.x || 100, y: carta.y || 100 }}
@@ -137,7 +204,12 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
           >
             {/* Contenitore che ruota */}
             <div
-              style={{ transform: `rotate(${carta.angle || 0}deg)` }}
+              style={{
+                transform: `rotate(${carta.angle || 0}deg) scale(${
+                  carta.scale || 1.0
+                })`,
+                transformOrigin: "center center",
+              }}
               className="relative"
             >
               {controlliVisibili === carta.id && (
@@ -193,9 +265,31 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
                       />
                     </button>
                   </div>
+                 
                   <div className="absolute bottom-[-1.5rem] right-[-1.5rem] z-30">
-                    <button>
-                        <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter}/>
+                    <button
+                      onMouseDown={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+
+                        scalaInCorso.current = true;
+
+                        scalaInfo.current = {
+                          attiva: true,
+                          cartaId: carta.id,
+                          startScale: carta.scale || 1.0,
+                          startMouseY: e.clientY,
+                          lastUpdateTime: Date.now(),
+                          ultimaScala: carta.scale || 1.0,
+                          sensibilita: 0.01,
+                        };
+                      }}
+                      style={{ cursor: "ns-resize" }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="bg-white rounded-full shadow p-2"
+                      aria-label="Ridimensiona carta"
+                    >
+                       <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} />
                     </button>
                   </div>
                 </>

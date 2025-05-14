@@ -34,6 +34,16 @@ const App = () => {
     });
   }, []);
 
+  const aggiornaScala = (id, nuovaScala) => {
+    // Limita la scala a un intervallo ragionevole
+    const scalaLimitata = Math.min(Math.max(nuovaScala, 0.5), 3.0);
+    
+    console.log("nuova scala", scalaLimitata);
+    setCarte((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, scale: scalaLimitata } : c))
+    );
+  };
+
   return (
     /*  <div className="grid grid-cols-[1fr_300px] grid-rows-[auto_160px] h-screen bg-gray-100">
     
@@ -60,6 +70,7 @@ const App = () => {
             onUpdatePosizione={aggiornaPosizione}
             onRimuovi={rimuoviCarta}
             onRuota={aggiornaAngolo}
+            onScala={aggiornaScala}
           />
         </div>
         <div className="p-4 barraCarte">
