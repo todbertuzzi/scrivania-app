@@ -18,8 +18,15 @@ const App = () => {
     setCarte((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const aggiornaAngolo = (id, angle) => {
-    setCarte((prev) => prev.map((c) => (c.id === id ? { ...c, angle } : c)));
+  const aggiornaAngolo = (id, nuovoAngolo) => {
+    console.log("nuovo angolo", nuovoAngolo);
+    setCarte(prev =>
+      prev.map(c =>
+        c.id === id
+          ? { ...c, angle: nuovoAngolo }
+          : c
+      )
+    );
   };
 
   return (

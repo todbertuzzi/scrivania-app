@@ -6,6 +6,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
   const areaRef = useRef(null);
   const [constraints, setConstraints] = useState(null);
+  const rotazioneInCorso = useRef(null);
 
   useEffect(() => {
     if (areaRef.current) {
@@ -16,16 +17,16 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
   return (
     <div ref={areaRef} className="w-full h-full relative overflow-hidden border border-dashed border-gray-400">
       {carte.map(carta => {
-        const angle = carta.angle || 0;
+        
         return (
           <motion.div
             key={carta.id}
             className="absolute"
-            drag
+            drag={!rotazioneInCorso.current}
             dragConstraints={constraints}
             dragMomentum={false}
             initial={{ x: 10, y: 10 }}
-            style={{ transform: `rotate(${angle}deg)` }}
+            animate={{ rotate: carta.angle || 0 }}
             onDragStart={() => {
               if (controlliVisibili !== carta.id) setControlliVisibili(carta.id);
             }}
@@ -33,11 +34,39 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota }) => {
           >
             {controlliVisibili === carta.id && (
               <>
-                <div className="absolute top-[-10px] left-[-25px] z-30">
-                  <button onClick={() => onRimuovi(carta.id)} className="bg-white rounded-full shadow p-1">X</button>
+                <div className="absolute top-[-1.5rem] left-[-1.5rem] z-30">
+                  <button onClick={() => onRimuovi(carta.id)} onMouseDown={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} className="bg-white rounded-full shadow p-1">❌</button>
                 </div>
-                <div className="absolute top-[-10px] right-[-25px] z-30">
-                <button onClick={() => onRuota(carta.id, (angle + 15) % 360)} onMouseDown={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} className="bg-white rounded-full shadow p-1">R</button>
+                <div className="absolute top-[-1.5rem] right-[-1.5rem] z-30">
+                  <button
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      rotazioneInCorso.current = true;
+                      const button = e.currentTarget;
+                      const cartaDiv = button.closest('.absolute');
+                      const rect = cartaDiv.getBoundingClientRect();
+                      const centerX = rect.left + rect.width / 2;
+                      const centerY = rect.top + rect.height / 2;
+
+                      const move = (moveEvent) => {
+                        const currentX = moveEvent.clientX;
+                        const currentY = moveEvent.clientY;
+                        const currentAngle = Math.atan2(currentY - centerY, currentX - centerX) * 180 / Math.PI;
+                        onRuota(carta.id, currentAngle);
+                      };
+
+                      const up = () => {
+                        rotazioneInCorso.current = false;
+                        window.removeEventListener('mousemove', move);
+                        window.removeEventListener('mouseup', up);
+                      };
+
+                      window.addEventListener('mousemove', move);
+                      window.addEventListener('mouseup', up);
+                    }}
+                    
+                 
+                    onPointerDown={(e) => e.stopPropagation()} className="bg-white rounded-full shadow p-1">🔄</button>
                 </div>
               </>
             )}
