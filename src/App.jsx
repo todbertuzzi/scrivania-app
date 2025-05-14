@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useCallback } from "react";
 import Plancia from "./components/Plancia";
 import SidebarUtenti from "./components/SidebarUtenti";
 import BarraCarte from "./components/BarraCarte";
@@ -18,13 +18,21 @@ const App = () => {
     setCarte((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const aggiornaAngolo = (id, nuovoAngolo) => {
+  const aggiornaAngolo = useCallback((id, nuovoAngolo) => {
     const normalizzato = ((nuovoAngolo % 360) + 360) % 360;
-    console.log("nuovo angolo", normalizzato);
-    setCarte((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, angle: normalizzato } : c))
-    );
-  };
+
+    // Evita aggiornamenti duplicati
+    setCarte((prev) => {
+      const carta = prev.find((c) => c.id === id);
+      // Se l'angolo è identico o molto simile, non aggiornare lo stato
+      if (carta && Math.abs(carta.angle - normalizzato) < 0.1) {
+        return prev; // Ritorna lo stato precedente senza cambiamenti
+      }
+
+      console.log("nuovo angolo", normalizzato);
+      return prev.map((c) => (c.id === id ? { ...c, angle: normalizzato } : c));
+    });
+  }, []);
 
   return (
     /*  <div className="grid grid-cols-[1fr_300px] grid-rows-[auto_160px] h-screen bg-gray-100">
