@@ -6,10 +6,12 @@ import {
   faXmark,
   faRotate,
   faUpRightAndDownLeftFromCenter,
-  faToggleOff,
+  faToggleOn,
 } from "@fortawesome/free-solid-svg-icons";
+import { carteMazzo } from "./BarraCarte"; // Importiamo la lista delle carte
+import cardFrontImage from '../assets/card_front.jpg'; // Importiamo l'immagine del fronte
 
-const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
+const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala, onGiraCarta }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
   const areaRef = useRef(null);
   const [constraints, setConstraints] = useState(null);
@@ -259,6 +261,11 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
     }
   }, []);
 
+  // Gestore per girare la carta
+  const handleGiraCarta = (id) => {
+    onGiraCarta(id, carteMazzo);
+  };
+
   return (
     <div
       ref={areaRef}
@@ -449,34 +456,48 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                       </button>
                     </div>
 
-                    {/* SWITCH BTN */}
+                    {/* TOGGLE FRONT/BACK BTN */}
                     <div className="absolute bottom-[-1.5rem] left-[-1.5rem] z-30">
                       <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleGiraCarta(carta.id);
+                        }}
                         onPointerDown={(e) => e.stopPropagation()}
                         className="bg-white rounded-full shadow p-2"
                         aria-label="Gira carta"
                       >
-                        <FontAwesomeIcon icon={faToggleOff} />
+                        <FontAwesomeIcon 
+                          icon={faToggleOn} 
+                          className={carta.isFront ? "text-gray-400" : "text-green-500"}
+                        />
                       </button>
                     </div>
                   </>
                 )}
 
                 <Card
-                  className={`w-auto h-[150px] p-1 bg-white overflow-hidden ${
+                  className={`w-auto h-[150px]  p-[10px] bg-white overflow-hidden ${
                     controlliVisibili === carta.id
                       ? "ring-4 ring-blue-400 shadow-xl"
                       : "shadow-lg"
                   }`}
                 >
-                  {carta.img ? (
+                  {/* Mostra l'immagine appropriata in base a isFront */}
+                  {carta.isFront ? (
+                    // Mostra il fronte (comune a tutte le carte)
                     <img
-                      src={carta.img}
-                      alt="Carta"
+                      src={carta.frontImg || cardFrontImage}
+                      alt="Fronte carta"
                       className="w-full h-full object-cover rounded pointer-events-none"
                     />
                   ) : (
-                    <div className="text-center p-4">Carta</div>
+                    // Mostra il retro (specifico per questa carta)
+                    <img
+                      src={carta.retro || carta.img}
+                      alt="Retro carta"
+                      className="w-full h-full object-cover rounded pointer-events-none"
+                    />
                   )}
                 </Card>
               </div>

@@ -1,13 +1,22 @@
-import React, { useState,useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import Plancia from "./components/Plancia";
 import SidebarUtenti from "./components/SidebarUtenti";
 import BarraCarte from "./components/BarraCarte";
 import "./App.css";
+
 const App = () => {
+  // Modifichiamo la struttura dei dati delle carte per supportare fronte/retro
   const [carte, setCarte] = useState([]);
 
   const aggiungiCarta = (carta) => {
-    setCarte((prev) => [...prev, carta]);
+    // Aggiungiamo le proprietà per gestire il fronte/retro
+    const nuovaCarta = {
+      ...carta,
+      isFront: true, // Inizialmente mostra il fronte
+      retro: null,   // L'immagine del retro verrà assegnata quando la carta viene girata
+    };
+    
+    setCarte((prev) => [...prev, nuovaCarta]);
   };
 
   const aggiornaPosizione = (id, x, y) => {
@@ -29,7 +38,6 @@ const App = () => {
         return prev; // Ritorna lo stato precedente senza cambiamenti
       }
 
-      console.log("nuovo angolo", normalizzato);
       return prev.map((c) => (c.id === id ? { ...c, angle: normalizzato } : c));
     });
   }, []);
@@ -38,29 +46,42 @@ const App = () => {
     // Limita la scala a un intervallo ragionevole
     const scalaLimitata = Math.min(Math.max(nuovaScala, 0.5), 3.0);
     
-    console.log("nuova scala", scalaLimitata);
     setCarte((prev) =>
       prev.map((c) => (c.id === id ? { ...c, scale: scalaLimitata } : c))
     );
   };
+  
+  // Funzione per girare una carta (fronte/retro)
+  const giraCarta = useCallback((id, carteMazzo) => {
+    setCarte((prev) => {
+      // Trova la carta da girare
+      const carta = prev.find((c) => c.id === id);
+      if (!carta) return prev;
+      
+      // Verifica se è la prima volta che giriamo questa carta
+      if (carta.isFront && carta.retro === null) {
+        // Prima volta che viene girata: scegli un'immagine casuale dal mazzo
+        const carteDisponibili = carteMazzo.filter(c => c.id !== carta.id);
+        const cartaRandom = carteDisponibili[Math.floor(Math.random() * carteDisponibili.length)];
+        
+        // Aggiorna la carta con il nuovo retro e cambia isFront
+        return prev.map((c) => 
+          c.id === id 
+            ? { ...c, isFront: !c.isFront, retro: cartaRandom.img } 
+            : c
+        );
+      } else {
+        // Carta già girata in precedenza, mantieni lo stesso retro ma cambia isFront
+        return prev.map((c) => 
+          c.id === id 
+            ? { ...c, isFront: !c.isFront } 
+            : c
+        );
+      }
+    });
+  }, []);
 
   return (
-    /*  <div className="grid grid-cols-[1fr_300px] grid-rows-[auto_160px] h-screen bg-gray-100">
-    
-      <div className="col-start-1 row-start-1 bg-green-50 border-r border-gray-300 overflow-hidden">
-       
-      </div>
-
-      
-      <div className="col-start-1 row-start-2 bg-white border-t border-gray-300">
-        <BarraCarte onAggiungiCarta={aggiungiCarta} />
-      </div>
-
-    
-      <div className="col-start-2 row-span-2 bg-white border-l border-gray-300 p-4 shadow-inner overflow-y-auto">
-        <SidebarUtenti />
-      </div>
-    </div> */
     <div className="flex h-screen bg-gray-100">
       <div className="flex flex-col flex-1 overflow-y-auto">
         <h1 className="text-2xl font-bold">Plancia!</h1>
@@ -71,6 +92,7 @@ const App = () => {
             onRimuovi={rimuoviCarta}
             onRuota={aggiornaAngolo}
             onScala={aggiornaScala}
+            onGiraCarta={giraCarta}
           />
         </div>
         <div className="p-4 barraCarte">
@@ -78,7 +100,7 @@ const App = () => {
         </div>
       </div>
 
-      <div className=" md:flex flex-col w-64 bg-gray-800">
+      <div className="md:flex flex-col w-64 bg-gray-800">
         <SidebarUtenti />
       </div>
     </div>
