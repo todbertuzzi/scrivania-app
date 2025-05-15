@@ -43,49 +43,53 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
   });
 
   // Funzione di gestione del movimento del mouse globale
-  const handleGlobalMouseMove = useCallback((e) => {
-    if (!rotazioneInfo.current.attiva) return;
-    
-    const now = Date.now();
-    if (now - rotazioneInfo.current.lastUpdateTime < 16) return;
-    
-    const { 
-      cartaId, 
-      startCardAngle, 
-      startMouseAngle, 
-      centerX, 
-      centerY,
-      lastDeltaAngle = 0, // Usa questo per tenere traccia dell'ultima differenza di angolo
-    } = rotazioneInfo.current;
-    
-    // Calcola l'angolo corrente del mouse rispetto al centro della carta
-    const currentMouseAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
-    
-    // Calcola la differenza di angolo
-    let angleDiff = currentMouseAngle - startMouseAngle;
-    
-    // Normalizza l'angleDiff per gestire i salti tra -180° e +180°
-    if (angleDiff - lastDeltaAngle > 180) {
-      angleDiff -= 360;
-    } else if (angleDiff - lastDeltaAngle < -180) {
-      angleDiff += 360;
-    }
-    
-    // Memorizza questa differenza di angolo per il prossimo frame
-    rotazioneInfo.current.lastDeltaAngle = angleDiff;
-    
-    // Calcola il nuovo angolo della carta
-    const newAngle = startCardAngle + angleDiff;
-    
-    // Evita aggiornamenti duplicati con lo stesso angolo
-    if (Math.abs(newAngle - rotazioneInfo.current.ultimoAngolo) < 0.2) return;
-    
-    rotazioneInfo.current.ultimoAngolo = newAngle;
-    rotazioneInfo.current.lastUpdateTime = now;
-    
-    // Aggiorna l'angolo della carta
-    onRuota(cartaId, newAngle);
-  }, [onRuota]);
+  const handleGlobalMouseMove = useCallback(
+    (e) => {
+      if (!rotazioneInfo.current.attiva) return;
+
+      const now = Date.now();
+      if (now - rotazioneInfo.current.lastUpdateTime < 16) return;
+
+      const {
+        cartaId,
+        startCardAngle,
+        startMouseAngle,
+        centerX,
+        centerY,
+        lastDeltaAngle = 0, // Usa questo per tenere traccia dell'ultima differenza di angolo
+      } = rotazioneInfo.current;
+
+      // Calcola l'angolo corrente del mouse rispetto al centro della carta
+      const currentMouseAngle =
+        (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI;
+
+      // Calcola la differenza di angolo
+      let angleDiff = currentMouseAngle - startMouseAngle;
+
+      // Normalizza l'angleDiff per gestire i salti tra -180° e +180°
+      if (angleDiff - lastDeltaAngle > 180) {
+        angleDiff -= 360;
+      } else if (angleDiff - lastDeltaAngle < -180) {
+        angleDiff += 360;
+      }
+
+      // Memorizza questa differenza di angolo per il prossimo frame
+      rotazioneInfo.current.lastDeltaAngle = angleDiff;
+
+      // Calcola il nuovo angolo della carta
+      const newAngle = startCardAngle + angleDiff;
+
+      // Evita aggiornamenti duplicati con lo stesso angolo
+      if (Math.abs(newAngle - rotazioneInfo.current.ultimoAngolo) < 0.2) return;
+
+      rotazioneInfo.current.ultimoAngolo = newAngle;
+      rotazioneInfo.current.lastUpdateTime = now;
+
+      // Aggiorna l'angolo della carta
+      onRuota(cartaId, newAngle);
+    },
+    [onRuota]
+  );
 
   // Funzione di gestione del rilascio del mouse globale
   const handleGlobalMouseUp = useCallback(() => {
@@ -167,6 +171,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
     <div
       ref={areaRef}
       className="w-full h-full relative overflow-hidden border border-dashed border-gray-400"
+      onClick={() => setControlliVisibili(null)}
     >
       {carte.map((carta) => {
         return (
@@ -193,8 +198,15 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                   carta.scale || 1.0
                 })`,
                 transformOrigin: "center center",
+                cursor: "pointer" // Aggiungi questa riga
               }}
-              ref={el => { cardRefs.current[carta.id] = el; }}
+              ref={(el) => {
+                cardRefs.current[carta.id] = el;
+              }}
+              onClick={(e) => {
+                e.stopPropagation(); // Previene la propagazione al div principale
+                setControlliVisibili(carta.id);
+              }}
               className="relative"
             >
               {controlliVisibili === carta.id && (
@@ -202,7 +214,10 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                   {/* REMOVE BTN */}
                   <div className="absolute top-[-1.5rem] left-[-1.5rem] z-30">
                     <button
-                      onClick={() => onRimuovi(carta.id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Aggiungi questa riga se non c'è già
+                        onRimuovi(carta.id);
+                      }}
                       onMouseDown={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
                       className="bg-white rounded-full shadow p-1"
@@ -216,16 +231,19 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                   {/* ROTATE BTN */}
                   <div className="absolute top-[-1.5rem] right-[-1.5rem] z-30">
                     <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Aggiungi questa riga se non c'è già
+                      }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
-                        
+
                         rotazioneInCorso.current = true;
-                        
+
                         // Usa il ref per accedere all'elemento della carta
                         const cardElement = cardRefs.current[carta.id];
                         let centerX, centerY;
-                        
+
                         if (cardElement) {
                           // Se il ref è disponibile, usa l'elemento della carta
                           const rect = cardElement.getBoundingClientRect();
@@ -233,15 +251,21 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                           centerY = rect.top + rect.height / 2;
                         } else {
                           // Fallback al metodo precedente se il ref non è disponibile
-                          const cartaDiv = e.currentTarget.closest('.absolute');
+                          const cartaDiv = e.currentTarget.closest(".absolute");
                           const rect = cartaDiv.getBoundingClientRect();
                           centerX = rect.left + rect.width / 2;
                           centerY = rect.top + rect.height / 2;
                         }
-                        
-                        const startMouseAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+
+                        const startMouseAngle =
+                          (Math.atan2(
+                            e.clientY - centerY,
+                            e.clientX - centerX
+                          ) *
+                            180) /
+                          Math.PI;
                         const startCardAngle = carta.angle || 0;
-                        
+
                         rotazioneInfo.current = {
                           attiva: true,
                           cartaId: carta.id,
@@ -251,7 +275,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                           centerY,
                           lastDeltaAngle: 0,
                           ultimoAngolo: carta.angle || 0,
-                          lastUpdateTime: Date.now()
+                          lastUpdateTime: Date.now(),
                         };
                       }}
                       // Cambia cursore per indicare che si può ruotare
@@ -268,6 +292,9 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala }) => {
                   {/* SCALE BTN */}
                   <div className="absolute bottom-[-1.5rem] right-[-1.5rem] z-30">
                     <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Aggiungi questa riga se non c'è già
+                      }}
                       onMouseDown={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
