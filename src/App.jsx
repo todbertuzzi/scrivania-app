@@ -26,63 +26,121 @@ const App = () => {
   // Riferimento al canale Pusher
   const [pusherChannel, setPusherChannel] = useState(null);
 
-  // Carica i dati di sessione dall'URL o da WP
-  useEffect(() => {
-    // Recupera i dati della sessione dall'API di WordPress
-    const fetchSessionData = async () => {
-      try {
-        // Ottieni token dalla URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
-        
-        if (!token) {
-          console.error('Token mancante');
-          return;
-        }
-        
-        // Chiama l'API WordPress per ottenere i dati di sessione
-        const response = await fetch('/wp-json/scrivania/v1/get-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-WP-Nonce': window.wpApiSettings?.nonce || ''
-          },
-          body: JSON.stringify({ token })
-        });
-        
-        if (!response.ok) {
-          throw new Error('Errore nel recupero dei dati di sessione');
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          // Imposta i dati di sessione
-          setSessionId(data.session_id);
-          setUserId(data.user_id);
-          setUserName(data.user_name);
-          setIsAdmin(data.is_admin);
-          setUtenteConControllo(data.is_admin ? data.user_id : null);
-          
-          // Se la sessione è già iniziata, carica lo stato della scrivania
-          if (data.sessione && data.sessione.attiva) {
-            setSessione(data.sessione);
-            
-            // Carica le carte se presenti
-            if (data.carte && Array.isArray(data.carte)) {
-              setCarte(data.carte);
-            }
-          }
-        } else {
-          console.error(data.message || 'Errore sconosciuto');
-        }
-      } catch (error) {
-        console.error('Errore:', error);
+  // Aggiungi questo all'inizio del file App.jsx
+console.log('Stato di Pusher:', {
+  windowPusher: !!window.Pusher,
+  scrivaniaPusher: !!window.scrivaniaPusher,
+  scrivaniaPusherConfig: window.scrivaniaPusherConfig,
+});
+
+// Se scrivaniaPusher esiste, controlla anche questo
+if (window.scrivaniaPusher) {
+  console.log('Dettagli scrivaniaPusher:', {
+    config: window.scrivaniaPusher.config,
+    connection: window.scrivaniaPusher.connection.state,
+  });
+}
+
+// In caso di problemi con window.scrivaniaPusherConfig, prova a definirlo globalmente
+if (!window.scrivaniaPusherConfig && window.Pusher) {
+  console.log('Configurazione Pusher mancante, creazione di un fallback');
+  window.scrivaniaPusherConfig = {
+    app_key: '36cf02242d86c80d6e7b',  // Sostituisci con la tua chiave
+    cluster: 'eu',
+    auth_endpoint: '/wp-json/scrivania/v1/pusher-auth',
+    nonce: document.querySelector('input[name="_wpnonce"]')?.value || ''
+  };
+  
+  window.scrivaniaPusher = new window.Pusher(window.scrivaniaPusherConfig.app_key, {
+    cluster: window.scrivaniaPusherConfig.cluster,
+    authEndpoint: window.scrivaniaPusherConfig.auth_endpoint,
+    auth: {
+      headers: {
+        'X-WP-Nonce': window.scrivaniaPusherConfig.nonce
       }
-    };
-    
-    fetchSessionData();
-  }, []);
+    }
+  });
+}
+
+
+  // Carica i dati di sessione dall'URL o da WP
+// Rilevare il token da più fonti (URL o attributi HTML)
+useEffect(() => {
+  // Recupera i dati della sessione dall'API di WordPress
+  const fetchSessionData = async () => {
+    try {
+      // Ottieni token - prima prova dall'URL, poi dagli attributi HTML
+      const urlParams = new URLSearchParams(window.location.search);
+      let token = urlParams.get('token');
+      
+      // Se non c'è token nell'URL, prova a ottenerlo dagli attributi
+      if (!token) {
+        const rootElement = document.getElementById('react-tool-root');
+        if (rootElement) {
+          token = rootElement.getAttribute('data-token');
+          
+          // Se ci sono anche user-id e user-name, imposta quelli
+          const userId = rootElement.getAttribute('data-user-id');
+          const userName = rootElement.getAttribute('data-user-name');
+          
+          if (userId) {
+            setUserId(parseInt(userId));
+          }
+          
+          if (userName) {
+            setUserName(userName);
+          }
+        }
+      }
+      
+      if (!token) {
+        console.error('Token mancante: né nell\'URL né negli attributi HTML');
+        return;
+      }
+      
+      // Chiama l'API WordPress per ottenere i dati di sessione
+      const response = await fetch('/wp-json/scrivania/v1/get-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-WP-Nonce': window.wpApiSettings?.nonce || ''
+        },
+        body: JSON.stringify({ token })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Errore nel recupero dei dati di sessione');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Imposta i dati di sessione
+        setSessionId(data.session_id);
+        setUserId(data.user_id);
+        setUserName(data.user_name);
+        setIsAdmin(data.is_admin);
+        setUtenteConControllo(data.is_admin ? data.user_id : null);
+        
+        // Se la sessione è già iniziata, carica lo stato della scrivania
+        if (data.sessione && data.sessione.attiva) {
+          setSessione(data.sessione);
+          
+          // Carica le carte se presenti
+          if (data.carte && Array.isArray(data.carte)) {
+            setCarte(data.carte);
+          }
+        }
+      } else {
+        console.error(data.message || 'Errore sconosciuto');
+      }
+    } catch (error) {
+      console.error('Errore:', error);
+    }
+  };
+  
+  fetchSessionData();
+}, []);
 
   // Connetti a Pusher una volta che hai i dati di sessione
   useEffect(() => {

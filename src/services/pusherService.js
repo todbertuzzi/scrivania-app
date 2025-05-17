@@ -3,10 +3,26 @@
 import Pusher from 'pusher-js';
 
 // Inizializzazione di Pusher
-const pusher = new Pusher(process.env.REACT_APP_PUSHER_KEY, {
-  cluster: process.env.REACT_APP_PUSHER_CLUSTER,
-  forceTLS: true
-});
+let pusher;
+if (window.scrivaniaPusher) {
+  // Usa l'istanza già configurata da WordPress
+  console.log('Usando istanza Pusher già configurata');
+  pusher = window.scrivaniaPusher;
+} else {
+  // Fallback alla creazione di una nuova istanza
+  console.log('Creando nuova istanza Pusher');
+  const key = process.env.REACT_APP_PUSHER_KEY || '';
+  const cluster = process.env.REACT_APP_PUSHER_CLUSTER || 'eu';
+  
+  if (!key) {
+    console.error('Nessuna chiave Pusher trovata. Verifica la configurazione.');
+  }
+  
+  pusher = new Pusher(key, {
+    cluster: cluster,
+    forceTLS: true
+  });
+}
 
 // Funzione per connettersi a un canale privato di sessione
 export const connectToSession = (sessionId, userId, userName) => {

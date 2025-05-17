@@ -5,15 +5,15 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: 'dist',
-    minify: true,
-    sourcemap: false, // Disabilita in produzione
-    rollupOptions: {
-      output: {
-        entryFileNames: 'scrivania-app.js',
-        chunkFileNames: 'scrivania-chunk-[name].js',
-        assetFileNames: 'scrivania-assets/[name].[ext]'
+      outDir: 'dist',
+      minify: true,
+      sourcemap: false, 
+      rollupOptions: {
+          output: {
+              entryFileNames: 'scrivania-app.js',
+              chunkFileNames: 'scrivania-chunk-[name].js',
+              assetFileNames: 'scrivania-assets/[name].[ext]'
+          }
       }
-    }
   }
 })
