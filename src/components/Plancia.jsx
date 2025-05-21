@@ -1,42 +1,23 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Card } from "../components/ui/Card";
-import { Button } from "../components/ui/Button";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faXmark,
   faRotate,
   faUpRightAndDownLeftFromCenter,
   faToggleOn,
-  faUsers
 } from "@fortawesome/free-solid-svg-icons";
-import { carteMazzo } from "./BarraCarte";
-import cardFrontImage from '../assets/card_front.jpg';
-import { connectToSession, setupEventListeners, triggerEvents, disconnectFromSession } from '../services/pusherService';
+import { carteMazzo } from "./BarraCarte"; // Importiamo la lista delle carte
+import cardFrontImage from '../assets/card_front.jpg'; // Importiamo l'immagine del fronte
 
-const Plancia = ({ 
-  carte, 
-  onUpdatePosizione, 
-  onRimuovi, 
-  onRuota, 
-  onScala, 
-  onGiraCarta,
-  sessionId,
-  userId,
-  userName,
-  isAdmin,
-  utenti,
-  setUtenti,
-  utenteConControllo,
-  setUtenteConControllo
-}) => {
+const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala, onGiraCarta }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
   const areaRef = useRef(null);
   const [constraints, setConstraints] = useState(null);
   const rotazioneInCorso = useRef(false);
   const scalaInCorso = useRef(false);
   const cardRefs = useRef({});
-  const [showUserList, setShowUserList] = useState(false);
   
   // Stati per il pan e zoom dell'intera plancia
   const [planciaZoom, setPlanciaZoom] = useState(1);
@@ -44,9 +25,6 @@ const Plancia = ({
   const [isPanning, setIsPanning] = useState(false);
   const panStartPosition = useRef({ x: 0, y: 0 });
   const panStartMousePosition = useRef({ x: 0, y: 0 });
-
-  // Riferimento al canale Pusher
-  const channelRef = useRef(null);
 
   // Informazioni sulla rotazione corrente
   const rotazioneInfo = useRef({
@@ -59,7 +37,7 @@ const Plancia = ({
     centerY: 0,
     ultimoAngolo: 0,
     lastUpdateTime: 0,
-    sensibilita: 0.5,
+    sensibilita: 0.5, // Regola questa sensibilità per controllare quanto velocemente ruota la carta
   });
 
   // Informazioni sulla scala
@@ -73,78 +51,7 @@ const Plancia = ({
     sensibilita: 0.01,
   });
 
-  // Flag per evitare loop infiniti negli eventi
-  const updatingFromRemote = useRef(false);
-
-  // Connessione a Pusher e configurazione degli handler
-  useEffect(() => {
-    if (!sessionId || !userId || !userName) return;
-
-    // Connessione al canale
-    const channel = connectToSession(sessionId, userId, userName);
-    channelRef.current = channel;
-
-    // Configurazione handlers per gli eventi
-    setupEventListeners(channel, {
-      onMembersUpdated: (members) => {
-        setUtenti(members);
-      },
-      onMemberLeft: (member) => {
-        setUtenti(prev => prev.filter(u => u.id !== member.id));
-      },
-      onMemberJoined: (member) => {
-        setUtenti(prev => [...prev, member]);
-      },
-      onCartaMossa: (cartaId, x, y) => {
-        updatingFromRemote.current = true;
-        onUpdatePosizione(cartaId, x, y);
-        updatingFromRemote.current = false;
-      },
-      onCartaRotata: (cartaId, angolo) => {
-        updatingFromRemote.current = true;
-        onRuota(cartaId, angolo);
-        updatingFromRemote.current = false;
-      },
-      onCartaScalata: (cartaId, scala) => {
-        updatingFromRemote.current = true;
-        onScala(cartaId, scala);
-        updatingFromRemote.current = false;
-      },
-      onControlloCambiato: (utenteId, haControllo) => {
-        setUtenteConControllo(utenteId);
-      },
-      onCartaAggiunta: (carta) => {
-        // Qui dovresti avere una funzione per aggiungere carte
-        // che può essere chiamata da questo handler
-      },
-      onCartaRimossa: (cartaId) => {
-        updatingFromRemote.current = true;
-        onRimuovi(cartaId);
-        updatingFromRemote.current = false;
-      },
-      onCartaGirata: (cartaId, isFront) => {
-        updatingFromRemote.current = true;
-        // Qui assumo che onGiraCarta possa accettare un terzo parametro
-        // che indica il valore esplicito di isFront
-        onGiraCarta(cartaId, carteMazzo, isFront);
-        updatingFromRemote.current = false;
-      },
-      onPlanciaSpostata: (x, y, zoom) => {
-        updatingFromRemote.current = true;
-        setPlanciaPosition({ x, y });
-        setPlanciaZoom(zoom);
-        updatingFromRemote.current = false;
-      }
-    });
-
-    return () => {
-      if (channelRef.current) {
-        disconnectFromSession(channelRef.current);
-      }
-    };
-  }, [sessionId, userId, userName, setUtenti, onUpdatePosizione, onRuota, onScala, onGiraCarta, onRimuovi, setUtenteConControllo]);
-
-  // Funzione di gestione del movimento del mouse globale per rotazione
+  // Funzione di gestione del movimento del mouse globale
   const handleGlobalMouseMove = useCallback(
     (e) => {
       if (!rotazioneInfo.current.attiva) return;
@@ -158,7 +65,7 @@ const Plancia = ({
         startMouseAngle,
         centerX,
         centerY,
-        lastDeltaAngle = 0,
+        lastDeltaAngle = 0, // Usa questo per tenere traccia dell'ultima differenza di angolo
       } = rotazioneInfo.current;
 
       // Calcola l'angolo corrente del mouse rispetto al centro della carta
@@ -189,11 +96,6 @@ const Plancia = ({
 
       // Aggiorna l'angolo della carta
       onRuota(cartaId, newAngle);
-      
-      // Invia l'evento agli altri client solo se non stiamo già aggiornando da un evento remoto
-      if (!updatingFromRemote.current && channelRef.current) {
-        triggerEvents.ruotaCarta(channelRef.current, cartaId, newAngle);
-      }
     },
     [onRuota]
   );
@@ -219,7 +121,7 @@ const Plancia = ({
       const { cartaId, startScale, startMouseY, sensibilita } =
         scalaInfo.current;
 
-      // Calcola lo spostamento verticale del mouse
+      // Calcola lo spostamento verticale del mouse (verso l'alto = zoom in, verso il basso = zoom out)
       const deltaY = startMouseY - e.clientY;
 
       // Calcola la nuova scala
@@ -236,17 +138,14 @@ const Plancia = ({
 
       // Aggiorna la scala della carta
       onScala(cartaId, newScale);
-      
-      // Invia l'evento agli altri client
-      if (!updatingFromRemote.current && channelRef.current) {
-        triggerEvents.scalaCarta(channelRef.current, cartaId, newScale);
-      }
     },
     [onScala]
   );
   
   // Gestione panning della plancia
   const handlePlanciaMouseDown = useCallback((e) => {
+    // Verifichiamo se il click è sulla plancia o sul contenitore di trasformazione
+    // permettendo il panning in entrambi i casi
     const isOnPlancia = e.currentTarget === areaRef.current && e.target === e.currentTarget;
     const isOnTransformContainer = e.target.classList.contains('transform-container');
     
@@ -264,28 +163,20 @@ const Plancia = ({
       const deltaY = e.clientY - panStartMousePosition.current.y;
       
       // Assicuriamoci che il movimento sia abbastanza significativo
+      // per evitare piccoli movimenti accidentali
       if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
-        const newPosition = {
+        setPlanciaPosition({
           x: panStartPosition.current.x + deltaX,
           y: panStartPosition.current.y + deltaY
-        };
-        
-        setPlanciaPosition(newPosition);
-        
-        // Invia l'evento agli altri client (ma non troppo frequentemente)
-        if (!updatingFromRemote.current && channelRef.current) {
-          // Throttling per non inviare troppi eventi
-          if (!isPanning.lastSent || Date.now() - isPanning.lastSent > 50) {
-            triggerEvents.spostaPLancia(channelRef.current, newPosition.x, newPosition.y, planciaZoom);
-            isPanning.lastSent = Date.now();
-          }
-        }
+        });
       }
     }
-  }, [isPanning, planciaZoom]);
+  }, [isPanning]);
   
   // Gestione zoom con rotellina del mouse
   const handlePlanciaWheel = useCallback((e) => {
+    // Non chiamiamo più e.preventDefault() per evitare l'errore con gli eventi passivi
+    
     // Determina la direzione dello zoom (positivo = zoom out, negativo = zoom in)
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
     
@@ -302,19 +193,8 @@ const Plancia = ({
     const newX = mouseX - (mouseX - planciaPosition.x) * scale;
     const newY = mouseY - (mouseY - planciaPosition.y) * scale;
     
-    const newPosition = { x: newX, y: newY };
-    
     setPlanciaZoom(newZoom);
-    setPlanciaPosition(newPosition);
-    
-    // Invia l'evento agli altri client
-    if (!updatingFromRemote.current && channelRef.current) {
-      // Throttling per non inviare troppi eventi
-      if (!handlePlanciaWheel.lastSent || Date.now() - handlePlanciaWheel.lastSent > 100) {
-        triggerEvents.spostaPLancia(channelRef.current, newPosition.x, newPosition.y, newZoom);
-        handlePlanciaWheel.lastSent = Date.now();
-      }
-    }
+    setPlanciaPosition({ x: newX, y: newY });
   }, [planciaZoom, planciaPosition]);
 
   // Funzione per gestire il rilascio del mouse durante la scala
@@ -323,76 +203,47 @@ const Plancia = ({
     scalaInCorso.current = false;
   }, []);
 
-  // Funzione wrapper per aggiornare la posizione di una carta
-  const handleUpdatePosizione = useCallback((cartaId, x, y) => {
-    onUpdatePosizione(cartaId, x, y);
-    
-    // Invia l'evento agli altri client
-    if (!updatingFromRemote.current && channelRef.current) {
-      triggerEvents.muoviCarta(channelRef.current, cartaId, x, y);
-    }
-  }, [onUpdatePosizione]);
-
-  // Funzione wrapper per rimuovere una carta
-  const handleRimuoviCarta = useCallback((cartaId) => {
-    onRimuovi(cartaId);
-    
-    // Invia l'evento agli altri client
-    if (!updatingFromRemote.current && channelRef.current) {
-      triggerEvents.rimuoviCarta(channelRef.current, cartaId);
-    }
-  }, [onRimuovi]);
-
-  // Funzione per girare una carta
-  const handleGiraCarta = useCallback((cartaId) => {
-    const carta = carte.find(c => c.id === cartaId);
-    const newIsFront = !carta.isFront;
-    
-    onGiraCarta(cartaId, carteMazzo);
-    
-    // Invia l'evento agli altri client
-    if (!updatingFromRemote.current && channelRef.current) {
-      triggerEvents.giraCarta(channelRef.current, cartaId, newIsFront);
-    }
-  }, [carte, onGiraCarta]);
-
-  // Funzione per assegnare il controllo a un utente
-  const assegnaControllo = useCallback((utenteId) => {
-    setUtenteConControllo(utenteId);
-    
-    // Invia l'evento agli altri client
-    if (channelRef.current) {
-      triggerEvents.assegnaControllo(channelRef.current, utenteId, true);
-    }
-  }, [setUtenteConControllo]);
-
   useEffect(() => {
-    // Configurazione del wheel event con opzione passive: false 
+    // Configurazione del wheel event con opzione passive: false per consentire preventDefault
+    // Questo risolve il problema degli eventi wheel passivi, ma richiede un approccio diverso
     const wheelHandler = (e) => {
+      // Solo se l'evento avviene sulla plancia o sul contenitore di trasformazione
       const isOnPlancia = areaRef.current && areaRef.current.contains(e.target);
       const isOnTransformContainer = e.target.classList && e.target.classList.contains('transform-container');
       
-      if ((isOnPlancia || isOnTransformContainer) && 
-          // Solo l'admin o l'utente con controllo può zoomare
-          (isAdmin || userId === utenteConControllo)) {
-        e.preventDefault();
+      if (isOnPlancia || isOnTransformContainer) {
+        e.preventDefault(); // Ora funziona perché non è un listener passivo
         handlePlanciaWheel(e);
       }
     };
     
+    // Usiamo l'opzione { passive: false } per consentire preventDefault sugli eventi wheel
     window.addEventListener('wheel', wheelHandler, { passive: false });
+
+    // I tuoi event listener per la rotazione...
     window.addEventListener("mousemove", handleGlobalMouseMove);
     window.addEventListener("mouseup", handleGlobalMouseUp);
+
+    // Aggiungi gli event listener per la scala
     window.addEventListener("mousemove", handleGlobalMouseMoveScale);
     window.addEventListener("mouseup", handleGlobalMouseUpScale);
+    
+    // Aggiungi l'event listener per il movimento del mouse durante il panning
     window.addEventListener("mousemove", handlePlanciaMouseMove);
 
+    // Rimuovi tutti gli event listener quando il componente viene smontato
     return () => {
       window.removeEventListener('wheel', wheelHandler, { passive: false });
+      
+      // Rimuovi gli event listener per la rotazione...
       window.removeEventListener("mousemove", handleGlobalMouseMove);
       window.removeEventListener("mouseup", handleGlobalMouseUp);
+
+      // Rimuovi gli event listener per la scala
       window.removeEventListener("mousemove", handleGlobalMouseMoveScale);
       window.removeEventListener("mouseup", handleGlobalMouseUpScale);
+      
+      // Rimuovi l'event listener per il panning
       window.removeEventListener("mousemove", handlePlanciaMouseMove);
     };
   }, [
@@ -402,9 +253,6 @@ const Plancia = ({
     handleGlobalMouseUpScale,
     handlePlanciaMouseMove,
     handlePlanciaWheel,
-    isAdmin,
-    userId,
-    utenteConControllo
   ]);
 
   useEffect(() => {
@@ -413,21 +261,28 @@ const Plancia = ({
     }
   }, []);
 
-  // Determina se l'utente corrente ha il controllo
-  const haControllo = isAdmin || userId === utenteConControllo;
+  // Gestore per girare la carta
+  const handleGiraCarta = (id) => {
+    onGiraCarta(id, carteMazzo);
+  };
 
   return (
     <div
       ref={areaRef}
       className="w-full h-full relative overflow-hidden border border-dashed border-gray-400 plancia-container"
       onClick={(e) => {
+        // Verifica se il click è direttamente sulla plancia
         if (e.target === e.currentTarget) {
           setControlliVisibili(null);
         }
       }}
-      onMouseDown={haControllo ? handlePlanciaMouseDown : undefined}
+      onMouseDown={handlePlanciaMouseDown}
+      onWheel={(e) => {
+        // Rimuoviamo questo handler poiché ora gestiamo l'evento wheel a livello globale
+        // con opzione passive: false per consentire preventDefault
+      }}
       style={{
-        cursor: isPanning && haControllo ? 'grabbing' : haControllo ? 'grab' : 'default',
+        cursor: isPanning ? 'grabbing' : 'grab',
       }}
     >
       <div
@@ -438,39 +293,40 @@ const Plancia = ({
           transition: 'transform 0.05s ease-out',
         }}
         onClick={(e) => {
+          // Interrompe la propagazione per evitare che il click arrivi alla plancia
+          // solo se è direttamente sul contenitore
           if (e.target === e.currentTarget) {
             e.stopPropagation();
             setControlliVisibili(null);
           }
         }}
-        onMouseDown={haControllo ? (e) => {
+        onMouseDown={(e) => {
+          // Se il click è direttamente sul contenitore, attiviamo il panning
           if (e.target === e.currentTarget) {
             e.stopPropagation();
             setIsPanning(true);
             panStartPosition.current = { ...planciaPosition };
             panStartMousePosition.current = { x: e.clientX, y: e.clientY };
           }
-        } : undefined}
+        }}
       >
         {carte.map((carta) => {
           return (
             <motion.div
               key={carta.id}
               className="absolute"
-              drag={haControllo && !rotazioneInCorso.current && !scalaInCorso.current && !isPanning}
+              drag={!rotazioneInCorso.current && !scalaInCorso.current && !isPanning}
               dragConstraints={constraints}
               dragMomentum={false}
               initial={{ x: carta.x || 100, y: carta.y || 100 }}
               style={{ position: "absolute" }}
               onDragStart={() => {
-                if (controlliVisibili !== carta.id && haControllo)
+                if (controlliVisibili !== carta.id)
                   setControlliVisibili(carta.id);
               }}
-              onDragEnd={(e, info) => {
-                if (haControllo) {
-                  handleUpdatePosizione(carta.id, info.point.x, info.point.y);
-                }
-              }}
+              onDragEnd={(e, info) =>
+                onUpdatePosizione(carta.id, info.point.x, info.point.y)
+              }
             >
               {/* Contenitore che ruota */}
               <div
@@ -479,27 +335,25 @@ const Plancia = ({
                     carta.scale || 1.0
                   })`,
                   transformOrigin: "center center",
-                  cursor: haControllo ? "pointer" : "default"
+                  cursor: "pointer" // Aggiungi questa riga
                 }}
                 ref={(el) => {
                   cardRefs.current[carta.id] = el;
                 }}
                 onClick={(e) => {
-                  if (haControllo) {
-                    e.stopPropagation(); // Previene la propagazione al div principale
-                    setControlliVisibili(carta.id);
-                  }
+                  e.stopPropagation(); // Previene la propagazione al div principale
+                  setControlliVisibili(carta.id);
                 }}
                 className="relative"
               >
-                {controlliVisibili === carta.id && haControllo && (
+                {controlliVisibili === carta.id && (
                   <>
                     {/* REMOVE BTN */}
                     <div className="absolute top-[-1.5rem] left-[-1.5rem] z-30">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRimuoviCarta(carta.id);
+                          onRimuovi(carta.id);
                         }}
                         onMouseDown={(e) => e.stopPropagation()}
                         onPointerDown={(e) => e.stopPropagation()}
@@ -623,7 +477,7 @@ const Plancia = ({
                 )}
 
                 <Card
-                  className={`w-auto h-[150px] p-[10px] bg-white overflow-hidden ${
+                  className={`w-auto h-[150px]  p-[10px] bg-white overflow-hidden ${
                     controlliVisibili === carta.id
                       ? "ring-4 ring-blue-400 shadow-xl"
                       : "shadow-lg"
@@ -652,51 +506,9 @@ const Plancia = ({
         })}
       </div>
       
-      {/* Indicatore dello zoom */}
+      {/* Indicatore dello zoom (opzionale) */}
       <div className="absolute bottom-3 right-3 bg-white bg-opacity-70 px-2 py-1 rounded text-sm">
         Zoom: {Math.round(planciaZoom * 100)}%
-      </div>
-
-      {/* Indicatore di controllo */}
-      <div className="absolute top-3 left-3 bg-white bg-opacity-70 px-2 py-1 rounded text-sm">
-        {haControllo ? 
-          <span className="text-green-600 font-bold">Hai il controllo</span> : 
-          <span className="text-gray-600">In attesa di controllo</span>
-        }
-      </div>
-
-      {/* Lista utenti connessi */}
-      <div className="absolute top-3 right-3 z-40">
-        <button 
-          onClick={() => setShowUserList(!showUserList)}
-          className="bg-white rounded-full shadow p-2 flex items-center justify-center"
-        >
-          <FontAwesomeIcon icon={faUsers} />
-          <span className="ml-1">{utenti.length}</span>
-        </button>
-
-        {showUserList && (
-          <div className="absolute right-0 top-10 bg-white shadow-lg rounded p-3 w-56">
-            <h4 className="text-sm font-bold mb-2">Utenti connessi</h4>
-            <ul className="max-h-40 overflow-y-auto">
-              {utenti.map((utente) => (
-                <li key={utente.id} className="flex justify-between items-center mb-1 text-sm">
-                  <span>{utente.name || 'Utente'}</span>
-                  {utente.id === utenteConControllo ? (
-                    <span className="text-green-600 text-xs">Ha controllo</span>
-                  ) : isAdmin && (
-                    <button 
-                      onClick={() => assegnaControllo(utente.id)}
-                      className="text-xs bg-blue-500 text-white px-2 py-1 rounded"
-                    >
-                      Dai controllo
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
       </div>
     </div>
   );

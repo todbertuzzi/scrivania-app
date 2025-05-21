@@ -10,7 +10,7 @@ if (window.scrivaniaPusher) {
   pusher = window.scrivaniaPusher;
 } else {
   // Fallback alla creazione di una nuova istanza
-  console.log('Creando nuova istanza Pusher');
+ /*  console.log('Creando nuova istanza Pusher');
   const key = process.env.REACT_APP_PUSHER_KEY || '';
   const cluster = process.env.REACT_APP_PUSHER_CLUSTER || 'eu';
   
@@ -21,7 +21,7 @@ if (window.scrivaniaPusher) {
   pusher = new Pusher(key, {
     cluster: cluster,
     forceTLS: true
-  });
+  }); */
 }
 
 // Funzione per connettersi a un canale privato di sessione
