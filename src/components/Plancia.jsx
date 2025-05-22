@@ -9,7 +9,7 @@ import {
   faToggleOn,
 } from "@fortawesome/free-solid-svg-icons";
 import { carteMazzo } from "./BarraCarte"; // Importiamo la lista delle carte
-import cardFrontImage from '../assets/card_front.jpg'; // Importiamo l'immagine del fronte
+//import cardFrontImage from '../assets/card_front.jpg'; // Importiamo l'immagine del fronte
 
 const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala, onGiraCarta }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
@@ -266,6 +266,12 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala, onGira
     onGiraCarta(id, carteMazzo);
   };
 
+  const getCardFrontImage = () => {
+    // Costruisci il percorso assoluto basato sulla configurazione WordPress
+    const baseUrl = '/wp-content/plugins/scrivania-collaborativa-api/js/app/assets/';
+    return baseUrl + 'card_front.jpg';
+  };
+
   return (
     <div
       ref={areaRef}
@@ -487,7 +493,7 @@ const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala, onGira
                   {carta.isFront ? (
                     // Mostra il fronte (comune a tutte le carte)
                     <img
-                      src={carta.frontImg || cardFrontImage}
+                      src={carta.frontImg || getCardFrontImage()}
                       alt="Fronte carta"
                       className="w-full h-full object-cover rounded pointer-events-none"
                     />
