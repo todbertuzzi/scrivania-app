@@ -9,7 +9,6 @@ import {
   faToggleOn,
 } from "@fortawesome/free-solid-svg-icons";
 import { carteMazzo } from "./BarraCarte"; // Importiamo la lista delle carte
-//import cardFrontImage from '../assets/card_front.jpg'; // Importiamo l'immagine del fronte
 
 const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala, onGiraCarta }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
