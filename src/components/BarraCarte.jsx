@@ -1,23 +1,18 @@
 import React from "react";
 import '../index.css';
-// Importiamo l'immagine del fronte direttamente
-/* import cardFrontImage from '../assets/card_front.jpg'; */
+import { getGameToolkitPath,getAssetPath } from '../utils/paths';
 
-const getImagePath = (imageName) => {
-  const baseUrl = '/wp-content/plugins/scrivania-collaborativa-api/js/app/assets/';
-  return baseUrl + imageName;
-};
 
 // Definiamo l'immagine del fronte comune a tutte le carte
-const CARTA_FRONTE = getImagePath('card_front.jpg');; // Ora utilizza l'import diretto
+const CARTA_FRONTE =  getAssetPath("card_front.jpg"); // Ora utilizza l'import diretto
 
 const carteMazzo = Array.from({ length: 20 }, (_, i) => {
   const numero = i + 1;
   return {
     id: `m${numero}`,
-    titolo: `Carta ${numero}`,
-    img: `/assets/new_vision_game_tool_kit_image/New Vision Game Tool Kit_image_${numero}.jpg`, // Retro specifico
-    frontImg: CARTA_FRONTE, // Aggiunto fronte comune
+    nome: `Carta ${numero}`,
+    img: getGameToolkitPath(`NewVisionGameToolKit_image_${numero}.jpg`), // Retro specifico
+    frontImg: getAssetPath("card_front.jpg"), 
   };
 });
 

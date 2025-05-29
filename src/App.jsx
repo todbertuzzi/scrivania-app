@@ -2,16 +2,40 @@ import React, { useState, useCallback, useEffect } from "react";
 import Plancia from "./components/Plancia";
 import SidebarUtenti from "./components/SidebarUtenti";
 import BarraCarte from "./components/BarraCarte";
+import {
+  DndContext,
+  DragOverlay,
+  useSensor,
+  useSensors,
+  PointerSensor,
+  TouchSensor,
+} from "@dnd-kit/core";
 import "./App.css";
 
 const App = () => {
   // Modifichiamo la struttura dei dati delle carte per supportare fronte/retro
   const [carte, setCarte] = useState([]);
   const [debugInfo, setDebugInfo] = useState({});
+  const [activeCard, setActiveCard] = useState(null);
 
   const [pusherChannel, setPusherChannel] = useState(null);
   const [utentiOnline, setUtentiOnline] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState("disconnected");
+
+  // Configurazione sensori per dnd-kit
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Previene drag accidentali quando si clicca sui controlli
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
 
   const aggiungiCarta = (carta) => {
     // Aggiungiamo le proprietà per gestire il fronte/retro
@@ -84,6 +108,35 @@ const App = () => {
       }
     });
   }, []);
+
+  // Gestori dnd-kit
+  const handleDragStart = useCallback(
+    (event) => {
+      const { active } = event;
+      const carta = carte.find((c) => c.id === active.id);
+      setActiveCard(carta);
+    },
+    [carte]
+  );
+
+  const handleDragEnd = useCallback(
+    (event) => {
+      const { active, delta } = event;
+
+      setActiveCard(null);
+
+      if (!delta) return;
+
+      // Trova la carta e aggiorna la sua posizione
+      const carta = carte.find((c) => c.id === active.id);
+      if (carta) {
+        const nuovaX = (carta.x || 100) + delta.x;
+        const nuovaY = (carta.y || 100) + delta.y;
+        aggiornaPosizione(active.id, nuovaX, nuovaY);
+      }
+    },
+    [carte, aggiornaPosizione]
+  );
 
   // Hook per inizializzare Pusher
   useEffect(() => {
@@ -249,88 +302,65 @@ const App = () => {
     console.log("Token da URL:", urlParams.get("token"));
   }, []);
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Panel di debug temporaneo */}
-      <div
-        style={{
-          position: "fixed",
-          top: "10px",
-          right: "10px",
-          background: "white",
-          border: "1px solid #ccc",
-          padding: "10px",
-          borderRadius: "5px",
-          fontSize: "12px",
-          maxWidth: "300px",
-          zIndex: 1000,
-        }}
-      >
-        <h4>🔍 Debug Info</h4>
-        <div>
-          <strong>Token:</strong> {debugInfo.token || "Non trovato"}
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex h-screen bg-gray-100">
+        {/* ...existing debug panel... */}
+
+        <div className="flex flex-col flex-1 overflow-y-auto">
+          <h1 className="text-2xl font-bold">Plancia!</h1>
+          <div className="p-4 planciaHolder flex-grow">
+            <Plancia
+              carte={carte}
+              onUpdatePosizione={aggiornaPosizione}
+              onRimuovi={rimuoviCarta}
+              onRuota={aggiornaAngolo}
+              onScala={aggiornaScala}
+              onGiraCarta={giraCarta}
+            />
+          </div>
+          <div className="p-4 barraCarte">
+            <BarraCarte onAggiungiCarta={aggiungiCarta} />
+          </div>
         </div>
-        <div>
-          <strong>User ID:</strong> {debugInfo.userId || "Non trovato"}
-        </div>
-        <div>
-          <strong>User Name:</strong> {debugInfo.userName || "Non trovato"}
-        </div>
-        <div>
-          <strong>Session ID:</strong> {debugInfo.sessionId || "Non trovato"}
-        </div>
-        <div>
-          <strong>Pusher:</strong> {window.scrivaniaPusher ? "✅" : "❌"}
-        </div>
-        <div>
-          <strong>Config:</strong> {window.scrivaniaPusherConfig ? "✅" : "❌"}
-        </div>
-        <div>
-          <strong>Status:</strong> {connectionStatus}
-        </div>
-        <div>
-          <strong>Utenti Online:</strong> {utentiOnline.length}
-        </div>
-        <div>
-          <strong>Canale:</strong> {pusherChannel ? "✅" : "❌"}
-        </div>
-        <div>
-          <strong>Nonce:</strong>{" "}
-          {window.scrivaniaPusherConfig?.nonce || "Non trovato"}
-        </div>
-        <div>
-          <strong>User ID:</strong>{" "}
-          {window.scrivaniaPusherConfig?.user_id || "Non trovato"}
-        </div>
-        <div>
-          <strong>WP API Nonce:</strong>{" "}
-          {window.wpApiSettings?.nonce || "Non trovato"}
-        </div>
-        <div>
-          <strong>Our Nonce:</strong>{" "}
-          {window.scrivaniaPusherConfig?.nonce || "Non trovato"}
-        </div>
-      </div>
-      <div className="flex flex-col flex-1 overflow-y-auto">
-        <h1 className="text-2xl font-bold">Plancia!</h1>
-        <div className="p-4 planciaHolder flex-grow">
-          <Plancia
-            carte={carte}
-            onUpdatePosizione={aggiornaPosizione}
-            onRimuovi={rimuoviCarta}
-            onRuota={aggiornaAngolo}
-            onScala={aggiornaScala}
-            onGiraCarta={giraCarta}
-          />
-        </div>
-        <div className="p-4 barraCarte">
-          <BarraCarte onAggiungiCarta={aggiungiCarta} />
+
+        <div className="md:flex flex-col w-64 bg-gray-800">
+          <SidebarUtenti />
         </div>
       </div>
 
-      <div className="md:flex flex-col w-64 bg-gray-800">
-        <SidebarUtenti />
-      </div>
-    </div>
+      {/* Overlay durante il drag - mantiene l'aspetto originale */}
+      <DragOverlay>
+        {activeCard ? (
+          <div
+            style={{
+              transform: `rotate(${activeCard.angle || 0}deg) scale(${
+                activeCard.scale || 1.0
+              })`,
+              transformOrigin: "center center",
+              opacity: 0.8,
+            }}
+            className="relative"
+          >
+            <div className="w-auto h-[150px] p-[10px] bg-white overflow-hidden shadow-xl rounded">
+              <img
+                src={
+                  activeCard.isFront
+                    ? activeCard.frontImg ||
+                      "/wp-content/plugins/scrivania-collaborativa-api/js/app/assets/card_front.jpg"
+                    : activeCard.retro || activeCard.img
+                }
+                alt="Carta in trascinamento"
+                className="w-full h-full object-cover rounded pointer-events-none"
+              />
+            </div>
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 };
 
