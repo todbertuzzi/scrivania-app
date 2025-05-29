@@ -1,23 +1,29 @@
 /**
  * Componente principale dell'applicazione
- * Versione refactored che utilizza hooks personalizzati e context
+ * Versione migliorata con migliore gestione dello stato e performance
  */
 import React, { useEffect } from "react";
+
+// Componenti principali
 import Plancia from "./components/Plancia";
 import SidebarUtenti from "./components/SidebarUtenti";
 import BarraCarte from "./components/BarraCarte";
+
+// Context e hooks
 import { SessionProvider, useSession } from "./context/SessionContext";
 import { useCardsManager } from "./hooks/useCardsManager";
 import { usePusher } from "./hooks/usePusher";
+
+// Componenti comuni
 import LoadingScreen from "./components/common/LoadingScreen";
 import ErrorMessage from "./components/common/ErrorMessage";
 
 // Componente interno che utilizza i hooks
 const AppContent = () => {
   // Accesso al contesto della sessione
-  const { sessionData, loading, error } = useSession();
+  const { sessionData, loading, error, saveSession } = useSession();
   
-  // Hook per la gestione delle carte
+  // Hook per la gestione delle carte con auto-save
   const {
     carte,
     setCarte,
@@ -32,7 +38,7 @@ const AppContent = () => {
   } = useCardsManager();
   
   // Callback per aggiornare il server quando una carta viene modificata
-  const handleCardUpdate = (tipo, carta) => {
+  const handleCardUpdate = React.useCallback((tipo, carta) => {
     if (!sessionData) return;
     
     // Aggiorna Pusher in base al tipo di modifica
@@ -60,15 +66,27 @@ const AppContent = () => {
           break;
       }
     }
-  };
+    
+    // Auto-save opzionale (debounced)
+    if (sessionData.isAdmin) {
+      debouncedSave();
+    }
+  }, [sessionData]);
+  
+  // Debounced save per evitare troppe chiamate al server
+  const debouncedSave = React.useMemo(
+    () => debounce(() => {
+      if (sessionData) {
+        saveSession(sessionData.sessione || {}, carte);
+      }
+    }, 2000),
+    [sessionData, carte, saveSession]
+  );
   
   // Callback per gli eventi Pusher
-  const pusherCallbacks = {
+  const pusherCallbacks = React.useMemo(() => ({
     onCartaMossa: (cartaId, x, y) => {
-      const carta = carte.find(c => c.id === cartaId);
-      if (carta) {
-        aggiornaPosizione(cartaId, x, y);
-      }
+      aggiornaPosizione(cartaId, x, y);
     },
     onCartaRotata: (cartaId, angolo) => {
       aggiornaAngolo(cartaId, angolo);
@@ -85,11 +103,10 @@ const AppContent = () => {
     onCartaGirata: (cartaId, isFront) => {
       const carta = carte.find(c => c.id === cartaId);
       if (carta) {
-        carta.isFront = isFront;
-        aggiornaDaServer(carta);
+        aggiornaDaServer({ ...carta, isFront });
       }
     }
-  };
+  }), [aggiornaPosizione, aggiornaAngolo, aggiornaScala, aggiornaDaServer, rimuoviDaServer, carte]);
   
   // Hook per la connessione Pusher
   const { 
@@ -100,69 +117,169 @@ const AppContent = () => {
   
   // Inizializza le carte dal sessionData
   useEffect(() => {
-    if (sessionData && sessionData.carte && sessionData.carte.length > 0) {
+    if (sessionData?.carte?.length > 0) {
       setCarte(sessionData.carte);
     }
   }, [sessionData, setCarte]);
   
-  // Se è in caricamento, mostra uno spinner
+  // Handlers per i componenti
+  const handlers = React.useMemo(() => ({
+    onAggiungiCarta: (carta) => {
+      aggiungiCarta(carta);
+      handleCardUpdate('aggiungi', carta);
+    },
+    onUpdatePosizione: (cartaId, x, y) => {
+      aggiornaPosizione(cartaId, x, y);
+      const carta = carte.find(c => c.id === cartaId);
+      if (carta) {
+        handleCardUpdate('posizione', { ...carta, x, y });
+      }
+    },
+    onRimuovi: (cartaId) => {
+      const carta = carte.find(c => c.id === cartaId);
+      rimuoviCarta(cartaId);
+      if (carta) {
+        handleCardUpdate('rimuovi', carta);
+      }
+    },
+    onRuota: (cartaId, angolo) => {
+      aggiornaAngolo(cartaId, angolo);
+      const carta = carte.find(c => c.id === cartaId);
+      if (carta) {
+        handleCardUpdate('rotazione', { ...carta, angle: angolo });
+      }
+    },
+    onScala: (cartaId, scala) => {
+      aggiornaScala(cartaId, scala);
+      const carta = carte.find(c => c.id === cartaId);
+      if (carta) {
+        handleCardUpdate('scala', { ...carta, scale: scala });
+      }
+    },
+    onGiraCarta: (cartaId, carteMazzo) => {
+      giraCarta(cartaId, carteMazzo);
+      const carta = carte.find(c => c.id === cartaId);
+      if (carta) {
+        handleCardUpdate('gira', { ...carta, isFront: !carta.isFront });
+      }
+    },
+    onPlanciaUpdate: (tipo, position, zoom) => {
+      if (pusherActions) {
+        pusherActions.spostaPlancia(position.x, position.y, zoom);
+      }
+    }
+  }), [
+    aggiungiCarta, aggiornaPosizione, rimuoviCarta, aggiornaAngolo, 
+    aggiornaScala, giraCarta, carte, handleCardUpdate, pusherActions
+  ]);
+  
+  // Rendering condizionale per stati di caricamento ed errore
   if (loading) {
     return <LoadingScreen message="Caricamento della sessione in corso..." />;
   }
   
-  // Se c'è un errore, mostra un messaggio
   if (error) {
     return <ErrorMessage message={error} />;
   }
   
-  // Se non ci sono dati di sessione, mostra un messaggio
   if (!sessionData) {
     return <ErrorMessage message="Nessuna sessione attiva. Verifica il token di invito." />;
   }
   
   return (
     <div className="flex h-screen bg-gray-100 overflow-hidden">
+      {/* Area principale */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <header className="bg-white border-b border-gray-200 p-4">
-          <div className="flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Scrivania Collaborativa</h1>
-            <div className="text-sm text-gray-500">
-              {connectionStatus === 'connected' ? (
-                <span className="text-green-500">✓ Connesso</span>
-              ) : (
-                <span className="text-red-500">⚠ {connectionStatus}</span>
-              )}
-            </div>
-          </div>
-        </header>
+        {/* Header */}
+        <Header 
+          connectionStatus={connectionStatus}
+          sessionData={sessionData}
+        />
         
-        <div className="flex-grow p-4 planciaHolder overflow-hidden">
+        {/* Plancia principale */}
+        <main className="flex-grow p-4 planciaHolder overflow-hidden">
           <Plancia
             carte={carte}
-            onUpdatePosizione={aggiornaPosizione}
-            onRimuovi={rimuoviCarta}
-            onRuota={aggiornaAngolo}
-            onScala={aggiornaScala}
-            onGiraCarta={giraCarta}
-            onPlanciaUpdate={(tipo, position, zoom) => {
-              if (pusherActions) {
-                pusherActions.spostaPlancia(position.x, position.y, zoom);
-              }
-            }}
+            onUpdatePosizione={handlers.onUpdatePosizione}
+            onRimuovi={handlers.onRimuovi}
+            onRuota={handlers.onRuota}
+            onScala={handlers.onScala}
+            onGiraCarta={handlers.onGiraCarta}
+            onPlanciaUpdate={handlers.onPlanciaUpdate}
           />
-        </div>
+        </main>
         
+        {/* Barra delle carte */}
         <div className="barraCarte">
-          <BarraCarte onAggiungiCarta={aggiungiCarta} />
+          <BarraCarte onAggiungiCarta={handlers.onAggiungiCarta} />
         </div>
       </div>
       
+      {/* Sidebar utenti */}
       <div className="w-64 flex-shrink-0">
         <SidebarUtenti utenti={utentiOnline} />
       </div>
     </div>
   );
 };
+
+/**
+ * Componente Header separato per migliore organizzazione
+ */
+const Header = React.memo(({ connectionStatus, sessionData }) => {
+  const getConnectionStatusDisplay = () => {
+    switch (connectionStatus) {
+      case 'connected':
+        return <span className="text-green-500">✓ Connesso</span>;
+      case 'connecting':
+        return <span className="text-yellow-500">⚡ Connessione...</span>;
+      case 'error':
+        return <span className="text-red-500">❌ Errore</span>;
+      default:
+        return <span className="text-gray-500">⚠ Disconnesso</span>;
+    }
+  };
+
+  return (
+    <header className="bg-white border-b border-gray-200 p-4 shadow-sm">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Scrivania Collaborativa</h1>
+          {sessionData?.isAdmin && (
+            <p className="text-sm text-gray-600">Modalità Amministratore</p>
+          )}
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <div className="text-sm">
+            {getConnectionStatusDisplay()}
+          </div>
+          
+          <div className="text-sm text-gray-500">
+            Utente: <span className="font-medium">{sessionData?.userName}</span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+});
+
+Header.displayName = 'Header';
+
+/**
+ * Utility function per debouncing
+ */
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
 
 /**
  * Componente App principale che avvolge il contenuto con il provider di sessione

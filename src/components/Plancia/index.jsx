@@ -1,14 +1,25 @@
 /**
  * Componente principale per la plancia della scrivania
- * Versione refactored che utilizza dndkit e componenti modulari
+ * Versione refactored con migliore separazione delle responsabilità
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import { DndContext, MouseSensor, TouchSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext } from '@dnd-kit/core';
 import { restrictToParentElement } from '@dnd-kit/modifiers';
+
+// Componenti
 import Carta from './Carta';
 import PanZoomControls from './PanZoomControls';
+import PlanciaBackground from './PlanciaBackground';
+
+// Hooks personalizzati
 import { usePlanciaControls } from '../../hooks/usePlanciaControls';
+import { useDragDropSensors } from '../../hooks/useDragDropSensors';
+import { useCardSelection } from '../../hooks/useCardSelection';
+
+// Context
 import { useSession } from '../../context/SessionContext';
+
+// Dati
 import { carteMazzo } from '../BarraCarte';
 
 /**
@@ -31,10 +42,10 @@ const Plancia = ({
   onGiraCarta,
   onPlanciaUpdate
 }) => {
-  // Stato per carta selezionata
-  const [selectedCardId, setSelectedCardId] = useState(null);
-  
-  // Hook per i controlli plancia (pan e zoom)
+  // Hooks personalizzati per le diverse funzionalità
+  const { haControllo } = useSession();
+  const { selectedCardId, handleSelectCard, clearSelection } = useCardSelection(haControllo);
+  const { sensors } = useDragDropSensors();
   const {
     planciaZoom,
     planciaPosition,
@@ -44,33 +55,12 @@ const Plancia = ({
     resetPlancia,
     setPlanciaData
   } = usePlanciaControls(onPlanciaUpdate);
-  
-  // Accesso al contesto della sessione
-  const { haControllo } = useSession();
-  
-  // Configurazione sensori dndkit
-  const sensors = useSensors(
-    useSensor(MouseSensor, {
-      // Attivazione solo con distanza minima (evita click accidentali)
-      activationConstraint: { distance: 5 }
-    }),
-    useSensor(TouchSensor, {
-      // Ritardo e tolleranza per dispositivi touch
-      activationConstraint: { delay: 250, tolerance: 5 }
-    })
-  );
-
-  // Callback per selezionare una carta
-  const handleSelectCard = useCallback((cardId) => {
-    if (!haControllo()) return;
-    setSelectedCardId(prev => prev === cardId ? null : cardId);
-  }, [haControllo]);
 
   // Gestisce fine drag
   const handleDragEnd = useCallback((event) => {
     const { active, delta } = event;
     
-    if (active && active.id && haControllo()) {
+    if (active?.id && haControllo()) {
       const carta = carte.find(c => c.id === active.id);
       if (carta) {
         onUpdatePosizione(
@@ -82,21 +72,31 @@ const Plancia = ({
     }
   }, [carte, onUpdatePosizione, haControllo]);
 
-  // Deseleziona carte quando si clicca sulla plancia
+  // Gestisce il click sulla plancia per deselezionare le carte
   const handlePlanciaClick = useCallback((e) => {
     // Solo se il click è direttamente sulla plancia o sul contenitore di trasformazione
     if (
       e.target === planciaRef.current ||
-      e.target.classList.contains('transform-container')
+      e.target.classList.contains('transform-container') ||
+      e.target.classList.contains('plancia-background')
     ) {
-      setSelectedCardId(null);
+      clearSelection();
     }
-  }, [planciaRef]);
+  }, [planciaRef, clearSelection]);
 
-  // Quando lo zoom cambia, deseleziona la carta
+  // Deseleziona carte quando lo zoom cambia
   useEffect(() => {
-    setSelectedCardId(null);
-  }, [planciaZoom]);
+    clearSelection();
+  }, [planciaZoom, clearSelection]);
+
+  // Handlers per i controlli zoom
+  const handleZoomIn = useCallback((newZoom) => {
+    setPlanciaData(planciaPosition, newZoom);
+  }, [planciaPosition, setPlanciaData]);
+
+  const handleZoomOut = useCallback((newZoom) => {
+    setPlanciaData(planciaPosition, newZoom);
+  }, [planciaPosition, setPlanciaData]);
 
   return (
     <DndContext
@@ -113,43 +113,82 @@ const Plancia = ({
           cursor: isPanning ? 'grabbing' : 'grab',
         }}
       >
+        {/* Background della plancia */}
+        <PlanciaBackground />
+        
         {/* Contenitore trasformabile per pan e zoom */}
         <div
           className="absolute w-full h-full transform-container"
           style={{
             transform: `scale(${planciaZoom}) translate(${planciaPosition.x}px, ${planciaPosition.y}px)`,
             transformOrigin: '0 0',
-            transition: 'transform 0.05s ease-out',
+            transition: isPanning ? 'none' : 'transform 0.1s ease-out',
           }}
         >
           {/* Renderizza tutte le carte */}
-          {carte.map((carta) => (
-            <Carta
-              key={carta.id}
-              carta={carta}
-              isSelected={selectedCardId === carta.id}
-              onSelect={handleSelectCard}
-              onUpdatePosizione={onUpdatePosizione}
-              onRimuovi={onRimuovi}
-              onRuota={onRuota}
-              onScala={onScala}
-              onGira={onGiraCarta}
-              carteMazzo={carteMazzo}
-              canDrag={haControllo()}
-            />
-          ))}
+          <CarteRenderer
+            carte={carte}
+            selectedCardId={selectedCardId}
+            onSelectCard={handleSelectCard}
+            onUpdatePosizione={onUpdatePosizione}
+            onRimuovi={onRimuovi}
+            onRuota={onRuota}
+            onScala={onScala}
+            onGiraCarta={onGiraCarta}
+            carteMazzo={carteMazzo}
+            canDrag={haControllo()}
+          />
         </div>
         
-        {/* Controlli per lo zoom */}
+        {/* Controlli per zoom e reset */}
         <PanZoomControls
           zoom={planciaZoom}
-          onZoomIn={(newZoom) => setPlanciaData({ x: planciaPosition.x, y: planciaPosition.y }, newZoom)}
-          onZoomOut={(newZoom) => setPlanciaData({ x: planciaPosition.x, y: planciaPosition.y }, newZoom)}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
           onReset={resetPlancia}
         />
       </div>
     </DndContext>
   );
 };
+
+/**
+ * Componente separato per il rendering delle carte
+ * Migliora le performance evitando re-render inutili del componente principale
+ */
+const CarteRenderer = React.memo(({
+  carte,
+  selectedCardId,
+  onSelectCard,
+  onUpdatePosizione,
+  onRimuovi,
+  onRuota,
+  onScala,
+  onGiraCarta,
+  carteMazzo,
+  canDrag
+}) => {
+  return (
+    <>
+      {carte.map((carta) => (
+        <Carta
+          key={carta.id}
+          carta={carta}
+          isSelected={selectedCardId === carta.id}
+          onSelect={onSelectCard}
+          onUpdatePosizione={onUpdatePosizione}
+          onRimuovi={onRimuovi}
+          onRuota={onRuota}
+          onScala={onScala}
+          onGira={onGiraCarta}
+          carteMazzo={carteMazzo}
+          canDrag={canDrag}
+        />
+      ))}
+    </>
+  );
+});
+
+CarteRenderer.displayName = 'CarteRenderer';
 
 export default Plancia;

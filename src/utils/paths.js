@@ -13,11 +13,11 @@ const isDevelopment = process.env.NODE_ENV === 'development';
  */
 export const getImagePath = (imageName) => {
   if (isDevelopment) {
-    // In sviluppo, usa il percorso relativo alla cartella public/assets
+    // In sviluppo, usa il percorso relativo alla cartella public
     return `/assets/${imageName}`;
   } else {
-    // In produzione, usa il percorso WordPress
-    const baseUrl = '/wp-content/plugins/scrivania-collaborativa-api/js/app/scrivania-assets/';
+    // In produzione, usa il percorso WordPress corretto
+    const baseUrl = '/wp-content/plugins/scrivania-collaborativa-api/js/app/';
     return `${baseUrl}${imageName}`;
   }
 };
@@ -32,8 +32,8 @@ export const getCardBackImagePath = (cardNumber) => {
     // In sviluppo, usa il percorso relativo
     return `/assets/new_vision_game_tool_kit_image/New Vision Game Tool Kit_image_${cardNumber}.jpg`;
   } else {
-    // In produzione, usa il percorso completo
-    return `/wp-content/plugins/scrivania-collaborativa-api/js/app/scrivania-assets/new_vision_game_tool_kit_image/New Vision Game Tool Kit_image_${cardNumber}.jpg`;
+    // In produzione, usa il percorso completo corretto
+    return `/wp-content/plugins/scrivania-collaborativa-api/js/app/new_vision_game_tool_kit_image/New Vision Game Tool Kit_image_${cardNumber}.jpg`;
   }
 };
 
@@ -45,8 +45,21 @@ export const getCardFrontImagePath = () => {
   return getImagePath('card_front.jpg');
 };
 
+/**
+ * Ottiene il percorso base per gli assets in base all'ambiente
+ * @returns {string} Percorso base degli assets
+ */
+export const getAssetsBasePath = () => {
+  if (isDevelopment) {
+    return '/assets/';
+  } else {
+    return '/wp-content/plugins/scrivania-collaborativa-api/js/app/';
+  }
+};
+
 export default {
   getImagePath,
   getCardBackImagePath,
-  getCardFrontImagePath
+  getCardFrontImagePath,
+  getAssetsBasePath
 };
