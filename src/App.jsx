@@ -332,34 +332,6 @@ const App = () => {
         </div>
       </div>
 
-      {/* Overlay durante il drag - mantiene l'aspetto originale */}
-      <DragOverlay>
-        {activeCard ? (
-          <div
-            style={{
-              transform: `rotate(${activeCard.angle || 0}deg) scale(${
-                activeCard.scale || 1.0
-              })`,
-              transformOrigin: "center center",
-              opacity: 0.8,
-            }}
-            className="relative"
-          >
-            <div className="w-auto h-[150px] p-[10px] bg-white overflow-hidden shadow-xl rounded">
-              <img
-                src={
-                  activeCard.isFront
-                    ? activeCard.frontImg ||
-                      "/wp-content/plugins/scrivania-collaborativa-api/js/app/assets/card_front.jpg"
-                    : activeCard.retro || activeCard.img
-                }
-                alt="Carta in trascinamento"
-                className="w-full h-full object-cover rounded pointer-events-none"
-              />
-            </div>
-          </div>
-        ) : null}
-      </DragOverlay>
     </DndContext>
   );
 };
