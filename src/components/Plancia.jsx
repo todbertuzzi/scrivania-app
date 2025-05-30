@@ -6,7 +6,7 @@ import { useCardRotation } from "../hooks/useCardRotation";
 import { useCardScale } from "../hooks/useCardScale";
 import { usePlanciaNavigation } from "../hooks/usePlanciaNavigation";
 
-const Plancia = ({ carte, onUpdatePosizione, onRimuovi, onRuota, onScala, onGiraCarta }) => {
+const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
   const areaRef = useRef(null);
   const cardRefs = useRef({});
