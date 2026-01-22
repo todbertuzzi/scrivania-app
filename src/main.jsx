@@ -5,6 +5,10 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
 
+// Variabile globale per tracciare se React è già stato montato
+let reactRoot = null;
+let isMounted = false;
+
 // Funzione per garantire l'esistenza dell'elemento root
 function ensureRootElement() {
   let container = document.getElementById("root");
@@ -18,14 +22,6 @@ function ensureRootElement() {
     container.id = "root";
     container.className = "scrivania-container";
 
-    // Cerca di ottenere token dall'URL
-    /*  const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("token");
-
-    if (token) {
-      console.log("Token trovato nell'URL:", token);
-      container.dataset.token = token;
-    } */
     const dataContainer = document.querySelector('.container')
     if (dataContainer) {
       // Copia tutti i data attributes dal template
@@ -72,9 +68,20 @@ function ensureRootElement() {
   return container;
 }
 
+// Funzione per controllare se React è già montato
+function isReactMounted() {
+  return isMounted && reactRoot !== null;
+}
+
 // Funzione per montare React
 function mountReact() {
   try {
+    // Controlla se React è già stato montato
+    if (isReactMounted()) {
+      console.log("React già montato, skip...");
+      return;
+    }
+
     console.log("Tentativo di montaggio React...");
 
     // Assicurati che l'elemento root esista
@@ -87,15 +94,21 @@ function mountReact() {
       userName: container.dataset.userName,
     });
 
-    // Crea la root React
-    const root = createRoot(container);
+    // Crea la root React solo se non esiste già
+    if (!reactRoot) {
+      reactRoot = createRoot(container);
+    }
 
     // Render dell'app
-    root.render(
+    reactRoot.render(
       <StrictMode>
         <App />
       </StrictMode>
     );
+
+    // Marca come montato
+    isMounted = true;
+
     const loadingElement = document.getElementById("scrivania-loading");
     if (loadingElement) {
       loadingElement.style.display = "none";
@@ -105,13 +118,22 @@ function mountReact() {
     console.log("App React montata con successo!");
   } catch (error) {
     console.error("Errore durante il montaggio React:", error);
+    // Reset dello stato in caso di errore
+    isMounted = false;
+    reactRoot = null;
   }
 }
 
 // Funzione per riprovare il montaggio
 function attemptMount(retries = 0) {
-  const MAX_RETRIES = 5;
-  const RETRY_DELAY = 1000; // 1 secondo tra i tentativi
+  const MAX_RETRIES = 5; // Ridotto il numero di tentativi
+  const RETRY_DELAY = 500; // Ridotto il delay
+
+  // Controlla se React è già montato prima di continuare
+  if (isReactMounted()) {
+    console.log("React già montato, interrompo i tentativi");
+    return;
+  }
 
   if (retries >= MAX_RETRIES) {
     console.error(`Impossibile montare React dopo ${MAX_RETRIES} tentativi`);
@@ -144,14 +166,36 @@ if (
   );
 }
 
-// Backup: riprova anche dopo il caricamento completo
+// Backup: riprova anche dopo il caricamento completo solo se non è già montato
 window.addEventListener("load", () => {
   console.log("Evento load attivato, controllo montaggio React");
 
-  // Controlla se l'app è già montata
-  const reactApp = document.querySelector("#root > *");
-  if (!reactApp) {
+  // Controlla se React è già montato
+  if (isReactMounted()) {
+    console.log("React già montato, skip controllo load");
+    return;
+  }
+
+  // Controllo più accurato se l'app è già montata
+  const container = document.getElementById("root");
+  const hasReactContent = container && container.querySelector('[data-reactroot], .scrivania-container > div');
+  
+  if (!hasReactContent) {
     console.log("App React non trovata dopo load, nuovo tentativo...");
     setTimeout(attemptMount, 200);
+  } else {
+    console.log("App React già presente nel DOM");
+    isMounted = true; // Aggiorna lo stato se rileva contenuto React
   }
 });
+
+// Cleanup function per development hot reload
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (reactRoot) {
+      reactRoot.unmount();
+      reactRoot = null;
+      isMounted = false;
+    }
+  });
+}
