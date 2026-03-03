@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:local": "VITE_APP_ENV=local vite",
     "build": "vite build",
+    "build:wp": "vite build && node scripts/deploy-to-wp-plugin.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

@@ -1,11 +1,10 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useCallback } from "react";
 import Plancia from "./components/Plancia";
 import SidebarUtenti from "./components/SidebarUtenti";
 import BarraCarte from "./components/BarraCarte";
 import { useSharedState } from "./hooks/useSharedState";
 import {
   DndContext,
-  DragOverlay,
   useSensor,
   useSensors,
   PointerSensor,
@@ -16,16 +15,19 @@ import "./App.css";
 const App = () => {
   const {
     sessionData,
-    userRole,
+    role,
+    permissions,
+    sessionId,
+    accessRevoked,
     isInitialized,
+    initError,
     updateCards,
     updatePlancia,
     moveCard,
     rotateCard,
     scaleCard,
+    scheduleSave,
   } = useSharedState();
-
-  const [activeCard, setActiveCard] = useState(null);
 
   // Configurazione sensori per dnd-kit
   const sensors = useSensors(
@@ -44,8 +46,8 @@ const App = () => {
 
   const aggiungiCarta = useCallback(
     (carta) => {
-      if (userRole !== "creator") {
-        console.log("Solo il creatore può aggiungere carte");
+      if (!permissions.canSpawn) {
+        console.log("Solo l'admin può aggiungere carte");
         return;
       }
 
@@ -57,55 +59,57 @@ const App = () => {
 
       const nuoveCarte = [...sessionData.carte, nuovaCarta];
       updateCards(nuoveCarte);
+      scheduleSave('spawn', 150);
     },
-    [sessionData.carte, updateCards, userRole]
+    [permissions.canSpawn, scheduleSave, sessionData.carte, updateCards]
   );
 
   const aggiornaPosizione = useCallback(
     (id, x, y) => {
-      if (userRole !== "creator") return;
+      if (!permissions.canWrite) return;
       moveCard(id, x, y);
     },
-    [moveCard, userRole]
+    [moveCard, permissions.canWrite]
   );
 
   const rimuoviCarta = useCallback(
     (id) => {
-      if (userRole !== "creator") {
-        console.log("Solo il creatore può rimuovere carte");
+      if (!permissions.canSpawn) {
+        console.log("Solo l'admin può rimuovere carte");
         return;
       }
 
       const nuoveCarte = sessionData.carte.filter((c) => c.id !== id);
       updateCards(nuoveCarte);
+      scheduleSave('remove', 150);
     },
-    [sessionData.carte, updateCards, userRole]
+    [permissions.canSpawn, scheduleSave, sessionData.carte, updateCards]
   );
 
   const aggiornaAngolo = useCallback(
     (id, nuovoAngolo) => {
-      if (userRole !== "creator") return;
+      if (!permissions.canWrite) return;
 
       const normalizzato = ((nuovoAngolo % 360) + 360) % 360;
       rotateCard(id, normalizzato);
     },
-    [rotateCard, userRole]
+    [permissions.canWrite, rotateCard]
   );
 
   const aggiornaScala = useCallback(
     (id, nuovaScala) => {
-      if (userRole !== "creator") return;
+      if (!permissions.canWrite) return;
 
       const scalaLimitata = Math.min(Math.max(nuovaScala, 0.5), 3.0);
       scaleCard(id, scalaLimitata);
     },
-    [scaleCard, userRole]
+    [permissions.canWrite, scaleCard]
   );
 
   const giraCarta = useCallback(
     (id, carteMazzo) => {
-      if (userRole !== "creator") {
-        console.log("Solo il creatore può girare le carte");
+      if (!permissions.canWrite) {
+        console.log("Non hai i permessi per girare le carte");
         return;
       }
 
@@ -123,28 +127,21 @@ const App = () => {
       });
 
       updateCards(nuoveCarte);
+      scheduleSave('flip', 200);
     },
-    [sessionData.carte, updateCards, userRole]
+    [permissions.canWrite, scheduleSave, sessionData.carte, updateCards]
   );
 
   // Gestori dnd-kit
-  const handleDragStart = useCallback(
-    (event) => {
-      if (userRole !== "creator") return;
-
-      const { active } = event;
-      const carta = sessionData.carte.find((c) => c.id === active.id);
-      setActiveCard(carta);
-    },
-    [sessionData.carte, userRole]
-  );
+  const handleDragStart = useCallback(() => {
+    if (!permissions.canWrite) return;
+  }, [permissions.canWrite]);
 
   const handleDragEnd = useCallback(
     (event) => {
-      if (userRole !== "creator") return;
+      if (!permissions.canWrite) return;
 
       const { active, delta } = event;
-      setActiveCard(null);
 
       if (!delta) return;
 
@@ -153,15 +150,33 @@ const App = () => {
         const nuovaX = (carta.x || 100) + delta.x;
         const nuovaY = (carta.y || 100) + delta.y;
         aggiornaPosizione(active.id, nuovaX, nuovaY);
+        scheduleSave('drag', 150);
       }
     },
-    [sessionData.carte, aggiornaPosizione, userRole]
+    [permissions.canWrite, scheduleSave, sessionData.carte, aggiornaPosizione]
   );
 
   if (!isInitialized) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg">Caricamento sessione...</div>
+      </div>
+    );
+  }
+
+  if (initError) {
+    return (
+      <div className="flex items-center justify-center h-screen p-6">
+        <div className="max-w-xl w-full bg-white rounded-lg shadow p-6">
+          <div className="text-lg font-semibold mb-2">Errore avvio scrivania</div>
+          <div className="text-sm text-gray-700 whitespace-pre-wrap mb-4">{String(initError)}</div>
+          <button
+            className="px-3 py-2 rounded bg-gray-900 text-white text-sm"
+            onClick={() => window.location.reload()}
+          >
+            Ricarica
+          </button>
+        </div>
       </div>
     );
   }
@@ -173,14 +188,31 @@ const App = () => {
       onDragEnd={handleDragEnd}
     >
       <div className="flex h-screen bg-gray-100">
+        {accessRevoked && (
+          <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
+              <div className="text-lg font-semibold mb-2">Accesso revocato</div>
+              <div className="text-sm text-gray-600 mb-4">
+                Il proprietario della sessione ha revocato i tuoi permessi. Ricarica la pagina o contatta l’admin.
+              </div>
+              <button
+                className="px-3 py-2 rounded bg-gray-900 text-white text-sm"
+                onClick={() => window.location.reload()}
+              >
+                Ricarica
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Indicatore ruolo utente */}
         <div className="absolute top-2 right-2 z-50 bg-white px-3 py-1 rounded shadow">
           <span
             className={`font-semibold ${
-              userRole === "creator" ? "text-green-600" : "text-blue-600"
+              role === "admin" ? "text-green-600" : role === "editor" ? "text-blue-600" : "text-gray-600"
             }`}
           >
-            {userRole === "creator" ? "Creatore" : "Spettatore"}
+            {role === "admin" ? "Admin" : role === "editor" ? "Editor" : "Viewer"}
           </span>
         </div>
 
@@ -194,15 +226,17 @@ const App = () => {
               onRuota={aggiornaAngolo}
               onScala={aggiornaScala}
               onGiraCarta={giraCarta}
-              userRole={userRole}
               onUpdatePlancia={updatePlancia}
               planciaZoom={sessionData.planciaZoom}
               planciaPosition={sessionData.planciaPosition}
+              canWrite={permissions.canWrite}
+              canSpawn={permissions.canSpawn}
+              onScheduleSave={scheduleSave}
             />
           </div>
 
           {/* Barra carte solo per il creatore */}
-          {userRole === "creator" && (
+          {permissions.canSpawn && (
             <div className="p-4 barraCarte">
               <BarraCarte onAggiungiCarta={aggiungiCarta} />
             </div>
@@ -210,7 +244,7 @@ const App = () => {
         </div>
 
         <div className="md:flex flex-col w-64 bg-gray-800">
-          <SidebarUtenti />
+          <SidebarUtenti sessionId={sessionId} permissions={permissions} role={role} />
         </div>
       </div>
     </DndContext>

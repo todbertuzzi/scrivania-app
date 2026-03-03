@@ -1,11 +1,18 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
-export const usePlanciaNavigation = () => {
-  const [planciaZoom, setPlanciaZoom] = useState(1);
-  const [planciaPosition, setPlanciaPosition] = useState({ x: 0, y: 0 });
+export const usePlanciaNavigation = ({ initialZoom = 1, initialPosition = { x: 0, y: 0 }, onChange } = {}) => {
+  const [planciaZoom, setPlanciaZoom] = useState(initialZoom);
+  const [planciaPosition, setPlanciaPosition] = useState(initialPosition);
   const [isPanning, setIsPanning] = useState(false);
   const panStartPosition = useRef({ x: 0, y: 0 });
   const panStartMousePosition = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    if (!isPanning) {
+      setPlanciaZoom(initialZoom);
+      setPlanciaPosition(initialPosition);
+    }
+  }, [initialZoom, initialPosition, isPanning]);
 
   const startPanning = useCallback((e) => {
     const isOnPlancia = e.currentTarget === e.target || 
@@ -25,13 +32,15 @@ export const usePlanciaNavigation = () => {
       const deltaY = e.clientY - panStartMousePosition.current.y;
 
       if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
-        setPlanciaPosition({
+        const nextPosition = {
           x: panStartPosition.current.x + deltaX,
           y: panStartPosition.current.y + deltaY,
-        });
+        };
+        setPlanciaPosition(nextPosition);
+        onChange?.(planciaZoom, nextPosition);
       }
     }
-  }, [isPanning]);
+  }, [isPanning, onChange, planciaZoom]);
 
   const stopPanning = useCallback(() => {
     setIsPanning(false);
@@ -50,8 +59,10 @@ export const usePlanciaNavigation = () => {
     const newY = mouseY - (mouseY - planciaPosition.y) * scale;
 
     setPlanciaZoom(newZoom);
-    setPlanciaPosition({ x: newX, y: newY });
-  }, [planciaZoom, planciaPosition]);
+    const nextPosition = { x: newX, y: newY };
+    setPlanciaPosition(nextPosition);
+    onChange?.(newZoom, nextPosition);
+  }, [onChange, planciaZoom, planciaPosition]);
 
   return {
     planciaZoom,

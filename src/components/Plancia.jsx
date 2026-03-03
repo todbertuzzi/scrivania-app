@@ -6,7 +6,19 @@ import { useCardRotation } from "../hooks/useCardRotation";
 import { useCardScale } from "../hooks/useCardScale";
 import { usePlanciaNavigation } from "../hooks/usePlanciaNavigation";
 
-const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
+const Plancia = ({
+  carte,
+  onRimuovi,
+  onRuota,
+  onScala,
+  onGiraCarta,
+  planciaZoom,
+  planciaPosition,
+  onUpdatePlancia,
+  canWrite,
+  canSpawn,
+  onScheduleSave,
+}) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
   const areaRef = useRef(null);
   const cardRefs = useRef({});
@@ -14,7 +26,15 @@ const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
   // Hook personalizzati
   const cardRotation = useCardRotation(onRuota);
   const cardScale = useCardScale(onScala);
-  const planciaNav = usePlanciaNavigation();
+  const planciaNav = usePlanciaNavigation({
+    initialZoom: planciaZoom ?? 1,
+    initialPosition: planciaPosition ?? { x: 0, y: 0 },
+    onChange: (zoom, position) => {
+      if (!canWrite) return;
+      onUpdatePlancia?.(zoom, position);
+      onScheduleSave?.('plancia', 600);
+    },
+  });
 
   // Gestori degli eventi globali
   useEffect(() => {
@@ -23,6 +43,7 @@ const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
       const isOnTransformContainer = e.target.classList && e.target.classList.contains("transform-container");
 
       if (isOnPlancia || isOnTransformContainer) {
+        if (!canWrite) return;
         e.preventDefault();
         planciaNav.handleZoom(e, areaRef);
       }
@@ -32,6 +53,7 @@ const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
       cardRotation.stopRotation();
       cardScale.stopScale();
       planciaNav.stopPanning();
+      onScheduleSave?.('end-gesture', 150);
     };
 
     window.addEventListener("wheel", wheelHandler, { passive: false });
@@ -47,7 +69,7 @@ const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
       window.removeEventListener("mousemove", planciaNav.handlePanning);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [cardRotation, cardScale, planciaNav]);
+  }, [cardRotation, cardScale, planciaNav, canWrite, onScheduleSave]);
 
   const handleGiraCarta = (id) => {
     onGiraCarta(id, carteMazzo);
@@ -66,9 +88,12 @@ const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
           setControlliVisibili(null);
         }
       }}
-      onMouseDown={planciaNav.startPanning}
+      onMouseDown={(e) => {
+        if (!canWrite) return;
+        planciaNav.startPanning(e);
+      }}
       style={{
-        cursor: planciaNav.isPanning ? "grabbing" : "grab",
+        cursor: canWrite ? (planciaNav.isPanning ? "grabbing" : "grab") : "default",
       }}
     >
       <div
@@ -87,6 +112,7 @@ const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
         onMouseDown={(e) => {
           if (e.target === e.currentTarget) {
             e.stopPropagation();
+            if (!canWrite) return;
             planciaNav.startPanning(e);
           }
         }}
@@ -106,6 +132,8 @@ const Plancia = ({ carte, onRimuovi, onRuota, onScala, onGiraCarta }) => {
             scalaInCorso={cardScale.scalaInCorso}
             onStartRotation={cardRotation.startRotation}
             onStartScale={cardScale.startScale}
+            canWrite={canWrite}
+            canSpawn={canSpawn}
           />
         ))}
       </div>

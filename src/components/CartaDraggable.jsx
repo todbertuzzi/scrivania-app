@@ -17,6 +17,8 @@ const CartaDraggable = ({
   scalaInCorso,
   onStartRotation,
   onStartScale,
+  canWrite,
+  canSpawn,
 }) => {
   const {
     attributes,
@@ -26,7 +28,7 @@ const CartaDraggable = ({
     isDragging,
   } = useDraggable({
     id: carta.id,
-    disabled: rotazioneInCorso.current || scalaInCorso.current || isPanning,
+    disabled: !canWrite || rotazioneInCorso.current || scalaInCorso.current || isPanning,
   });
 
   const style = {
@@ -44,6 +46,7 @@ const CartaDraggable = ({
       {...attributes}
       {...listeners}
       onMouseDown={() => {
+        if (!canWrite && !canSpawn) return;
         if (controlliVisibili !== carta.id) {
           setControlliVisibili(carta.id);
         }
@@ -61,11 +64,12 @@ const CartaDraggable = ({
         }}
         onClick={(e) => {
           e.stopPropagation();
+          if (!canWrite && !canSpawn) return;
           setControlliVisibili(carta.id);
         }}
         className="relative"
       >
-        {controlliVisibili === carta.id && (
+        {controlliVisibili === carta.id && (canWrite || canSpawn) && (
           <CardControls
             carta={carta}
             onRimuovi={onRimuovi}
@@ -73,6 +77,8 @@ const CartaDraggable = ({
             onStartScale={onStartScale}
             handleGiraCarta={handleGiraCarta}
             cardRefs={cardRefs}
+            canWrite={canWrite}
+            canSpawn={canSpawn}
           />
         )}
 

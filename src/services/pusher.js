@@ -7,8 +7,12 @@ class PusherService {
     this.isConnected = false;
   }
 
+  isReady() {
+    return Boolean(this.isConnected && this.channel);
+  }
+
   // Inizializza Pusher solo se non siamo in locale
-  async init(sessionId, userRole = 'viewer') {
+  async init(sessionId) {
     const isLocal = window.location.hostname === 'localhost' || 
                     window.location.hostname === '127.0.0.1';
 
@@ -17,16 +21,45 @@ class PusherService {
       return;
     }
 
+    const cfg = window.scrivaniaPusherConfig;
+    if (!cfg?.server_ready) {
+      console.log('Pusher disabilitato: server non configurato');
+      return;
+    }
+
+    if (!cfg?.app_key || !cfg?.cluster || !cfg?.auth_endpoint || !cfg?.nonce) {
+      console.error('Configurazione Pusher mancante (scrivaniaPusherConfig)');
+      return;
+    }
+
     try {
-      this.pusher = new Pusher(process.env.VITE_PUSHER_KEY || 'your-pusher-key', {
-        cluster: process.env.VITE_PUSHER_CLUSTER || 'eu',
-        encrypted: true,
+      this.pusher = new Pusher(cfg.app_key, {
+        cluster: cfg.cluster,
+        forceTLS: true,
+        authEndpoint: cfg.auth_endpoint,
+        auth: {
+          headers: {
+            'X-WP-Nonce': cfg.nonce,
+          },
+        },
       });
 
-      this.channel = this.pusher.subscribe(`session-${sessionId}`);
+      this.channel = this.pusher.subscribe(`presence-scrivania-${sessionId}`);
       this.isConnected = true;
-      
-      console.log(`Connesso al canale session-${sessionId} come ${userRole}`);
+
+      console.log(`Richiesta iscrizione al canale presence-scrivania-${sessionId}`);
+
+      try {
+        this.channel.bind('pusher:subscription_succeeded', () => {
+          console.log(`Subscription OK: presence-scrivania-${sessionId}`);
+        });
+
+        this.channel.bind('pusher:subscription_error', (status) => {
+          console.error(`Subscription ERROR (${status}) su presence-scrivania-${sessionId}`);
+        });
+      } catch {
+        // ignore
+      }
     } catch (error) {
       console.error('Errore inizializzazione Pusher:', error);
     }
@@ -36,41 +69,18 @@ class PusherService {
   subscribe(eventName, callback) {
     if (!this.isConnected || !this.channel) {
       console.log(`Modalità locale: evento ${eventName} ignorato`);
-      return;
+      return () => {};
     }
 
     this.channel.bind(eventName, callback);
-  }
 
-  // Trigger eventi (solo per il creatore)
-  async trigger(eventName, data) {
-    if (!this.isConnected) {
-      console.log(`Modalità locale: trigger ${eventName} ignorato`);
-      return;
-    }
-
-    try {
-      // Invia tramite API WordPress che poi trigghera Pusher
-      await fetch('/wp-json/scrivania/v1/trigger', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.getToken()}`
-        },
-        body: JSON.stringify({
-          event: eventName,
-          data: data,
-          channel: this.channel.name
-        })
-      });
-    } catch (error) {
-      console.error('Errore trigger evento:', error);
-    }
-  }
-
-  getToken() {
-    const container = document.querySelector('#root');
-    return container?.dataset?.token || '';
+    return () => {
+      try {
+        this.channel?.unbind(eventName, callback);
+      } catch {
+        // ignore
+      }
+    };
   }
 
   disconnect() {
