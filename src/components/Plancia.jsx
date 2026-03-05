@@ -7,6 +7,8 @@ import { useCardScale } from "../hooks/useCardScale";
 import { usePlanciaNavigation } from "../hooks/usePlanciaNavigation";
 import { LuUsers } from "react-icons/lu";
 import { TbBackground } from "react-icons/tb";
+import { PiCardsThreeLight } from "react-icons/pi";
+
 const Plancia = ({
   carte,
   onRimuovi,
@@ -18,6 +20,8 @@ const Plancia = ({
   onUpdatePlancia,
   canWrite,
   canSpawn,
+  isCardsTrayOpen,
+  onToggleCardsTray,
   onScheduleSave,
   isSidebarOpen,
   onToggleSidebar,
@@ -82,7 +86,7 @@ const Plancia = ({
     return getAssetPath('card_front.jpg');
   };
 
-  const pannelloControlliBottom = canSpawn ? 210 : 35;
+  const pannelloControlliBottom = canSpawn && isCardsTrayOpen ? 210 : 35;
 
   return (
     <div
@@ -199,7 +203,18 @@ const Plancia = ({
               onClick={onCycleBackground}
               aria-label="Cambia sfondo"
             >
-              <TbBackground />
+              <TbBackground size={28}/>
+            </button>
+          )}
+
+          {canSpawn && typeof onToggleCardsTray === 'function' && (
+            <button
+              type="button"
+              className="ml-1 h-7 px-2 text-white flex items-center bg-gray-800 justify-center rounded-full border border-gray-300 text-gray-700 text-xs hover:bg-gray-100 hover:text-black"
+              onClick={onToggleCardsTray}
+              aria-label={isCardsTrayOpen ? 'Nascondi barra carte' : 'Mostra barra carte'}
+            >
+              <PiCardsThreeLight size={28}/>
             </button>
           )}
 
@@ -211,7 +226,7 @@ const Plancia = ({
               aria-label={isSidebarOpen ? "Nascondi elenco utenti" : "Mostra elenco utenti"}
             >
               {/* icona hamburger */}
-              <span className="text-base"><LuUsers /></span>
+              <span className="text-base"><LuUsers size={28} /></span>
             </button>
           )}
         </div>

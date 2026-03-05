@@ -45,6 +45,7 @@ const App = () => {
   } = useSharedState();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isCardsTrayOpen, setIsCardsTrayOpen] = useState(true);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
 
   const currentBackground = useMemo(() => {
@@ -268,6 +269,8 @@ const App = () => {
                 planciaPosition={sessionData.planciaPosition}
                 canWrite={permissions.canWrite}
                 canSpawn={permissions.canSpawn}
+                isCardsTrayOpen={isCardsTrayOpen}
+                onToggleCardsTray={() => setIsCardsTrayOpen((prev) => !prev)}
                 onScheduleSave={scheduleSave}
                 isSidebarOpen={isSidebarOpen}
                 onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
@@ -276,7 +279,7 @@ const App = () => {
             </div>
 
             {/* Barra carte solo per il creatore, interna alla plancia */}
-            {permissions.canSpawn && (
+            {permissions.canSpawn && isCardsTrayOpen && (
               <div className="barraCarte">
                 <div className="barraCarte-tray absolute z-10 bg-white-80 rounded-[32px] shadow border border-gray-200 px-4 py-3">
                   <BarraCarte onAggiungiCarta={aggiungiCarta} />
