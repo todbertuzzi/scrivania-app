@@ -34,6 +34,8 @@ const CartaDraggable = ({
 
   const x = carta.x ?? 100;
   const y = carta.y ?? 100;
+  const angle = Number.isFinite(Number(carta.angle)) ? Number(carta.angle) : 0;
+  const scale = Number.isFinite(Number(carta.scale)) ? Number(carta.scale) : 1.0;
 
   // Animazione low-impact per chi non può scrivere (viewer): ammorbidisce il “salto” tra snapshot.
   // Durata in base alla distanza spaziale tra stato precedente e nuovo.
@@ -60,6 +62,46 @@ const CartaDraggable = ({
   useEffect(() => {
     prevPosRef.current = { x, y };
   }, [x, y]);
+
+  // Rotazione: evita “giri lunghi” quando si passa vicino a 0/360.
+  const prevAngleRef = useRef(null);
+  const displayAngle = useMemo(() => {
+    if (canWrite) return angle;
+    const prev = prevAngleRef.current;
+    if (typeof prev !== 'number') return angle;
+
+    const candidates = [angle, angle + 360, angle - 360];
+    let best = candidates[0];
+    let bestDist = Math.abs(best - prev);
+    for (let i = 1; i < candidates.length; i++) {
+      const c = candidates[i];
+      const d = Math.abs(c - prev);
+      if (d < bestDist) {
+        best = c;
+        bestDist = d;
+      }
+    }
+    return best;
+  }, [angle, canWrite]);
+
+  const rotateTransitionMs = useMemo(() => {
+    if (canWrite) return 0;
+    const prev = prevAngleRef.current;
+    if (typeof prev !== 'number') return 0;
+
+    const degDiff = Math.abs(displayAngle - prev);
+    const SPEED_DEG_PER_SEC = 900;
+    const MIN_MS = 20;
+    const MAX_MS = 220;
+
+    const computed = (degDiff / SPEED_DEG_PER_SEC) * 1000;
+    const clamped = Math.max(MIN_MS, Math.min(MAX_MS, computed));
+    return Math.round(clamped);
+  }, [canWrite, displayAngle]);
+
+  useEffect(() => {
+    prevAngleRef.current = displayAngle;
+  }, [displayAngle]);
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -91,10 +133,17 @@ const CartaDraggable = ({
     >
       <div
         style={{
-          transform: `rotate(${carta.angle || 0}deg) scale(${carta.scale || 1.0})`,
+          transform: `rotate(${displayAngle}deg) scale(${scale})`,
           transformOrigin: "center center",
           cursor: isDragging ? "grabbing" : "pointer",
           opacity: isDragging ? 0.5 : 1,
+          ...(canWrite
+            ? {}
+            : {
+                transitionProperty: "transform",
+                transitionDuration: `${rotateTransitionMs}ms`,
+                transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+              }),
         }}
         ref={(el) => {
           cardRefs.current[carta.id] = el;

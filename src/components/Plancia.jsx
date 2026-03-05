@@ -49,7 +49,6 @@ const Plancia = ({
       if (isOnPlancia || isOnTransformContainer) {
         if (!canWrite) return;
         e.preventDefault();
-        planciaNav.handleZoom(e, areaRef);
       }
     };
 
