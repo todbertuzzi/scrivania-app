@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import Plancia from "./components/Plancia";
 import SidebarUtenti from "./components/SidebarUtenti";
 import BarraCarte from "./components/BarraCarte";
@@ -11,6 +11,21 @@ import {
   TouchSensor,
 } from "@dnd-kit/core";
 import "./App.css";
+import { getAssetPath } from "./utils/paths";
+import bgVerde from "./assets/bgs/background_verde.jpg";
+import bgLegno from "./assets/bgs/background_legno.jpg";
+const isLocalEnv =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1" ||
+    window.location.port !== "");
+
+const LOCAL_BACKGROUNDS = [bgVerde, bgLegno];
+const REMOTE_BACKGROUNDS = [
+  "bgs/background_verde.jpg",
+  "bgs/background_legno.jpg",
+];
+const BACKGROUND_COUNT = LOCAL_BACKGROUNDS.length;
 
 const App = () => {
   const {
@@ -28,6 +43,16 @@ const App = () => {
     scaleCard,
     scheduleSave,
   } = useSharedState();
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [backgroundIndex, setBackgroundIndex] = useState(0);
+
+  const currentBackground = useMemo(() => {
+    if (isLocalEnv) {
+      return LOCAL_BACKGROUNDS[backgroundIndex];
+    }
+    return getAssetPath(REMOTE_BACKGROUNDS[backgroundIndex]);
+  }, [backgroundIndex]);
 
   // Configurazione sensori per dnd-kit
   const sensors = useSensors(
@@ -147,14 +172,18 @@ const App = () => {
 
       const carta = sessionData.carte.find((c) => c.id === active.id);
       if (carta) {
-        const nuovaX = (carta.x || 100) + delta.x;
-        const nuovaY = (carta.y || 100) + delta.y;
+        const nuovaX = (carta.x ?? 100) + delta.x;
+        const nuovaY = (carta.y ?? 100) + delta.y;
         aggiornaPosizione(active.id, nuovaX, nuovaY);
         scheduleSave('drag', 150);
       }
     },
     [permissions.canWrite, scheduleSave, sessionData.carte, aggiornaPosizione]
   );
+
+  const handleCycleBackground = useCallback(() => {
+    setBackgroundIndex((prev) => (prev + 1) % BACKGROUND_COUNT);
+  }, []);
 
   if (!isInitialized) {
     return (
@@ -187,7 +216,15 @@ const App = () => {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex h-screen bg-gray-100">
+      <div
+        className="flex h-screen bg-gray-100"
+        style={{
+          backgroundImage: `url(${currentBackground})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         {accessRevoked && (
           <div className="absolute inset-0 z-[100] bg-black/50 flex items-center justify-center p-6">
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
@@ -206,7 +243,7 @@ const App = () => {
         )}
 
         {/* Indicatore ruolo utente */}
-        <div className="absolute top-2 right-2 z-50 bg-white px-3 py-1 rounded shadow">
+        <div className="absolute top- left-2 z-50 bg-white px-3 py-1 rounded shadow">
           <span
             className={`font-semibold ${
               role === "admin" ? "text-green-600" : role === "editor" ? "text-blue-600" : "text-gray-600"
@@ -216,35 +253,49 @@ const App = () => {
           </span>
         </div>
 
-        <div className="flex flex-col flex-1 overflow-y-auto">
-          <h1 className="text-2xl font-bold">Plancia Collaborativa</h1>
-          <div className="p-4 planciaHolder flex-grow">
-            <Plancia
-              carte={sessionData.carte}
-              onUpdatePosizione={aggiornaPosizione}
-              onRimuovi={rimuoviCarta}
-              onRuota={aggiornaAngolo}
-              onScala={aggiornaScala}
-              onGiraCarta={giraCarta}
-              onUpdatePlancia={updatePlancia}
-              planciaZoom={sessionData.planciaZoom}
-              planciaPosition={sessionData.planciaPosition}
-              canWrite={permissions.canWrite}
-              canSpawn={permissions.canSpawn}
-              onScheduleSave={scheduleSave}
-            />
-          </div>
-
-          {/* Barra carte solo per il creatore */}
-          {permissions.canSpawn && (
-            <div className="p-4 barraCarte">
-              <BarraCarte onAggiungiCarta={aggiungiCarta} />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <div className="planciaHolder flex flex-col">
+            <div className="flex-1 p-0 overflow-hidden">
+              <Plancia
+                carte={sessionData.carte}
+                onUpdatePosizione={aggiornaPosizione}
+                onRimuovi={rimuoviCarta}
+                onRuota={aggiornaAngolo}
+                onScala={aggiornaScala}
+                onGiraCarta={giraCarta}
+                onUpdatePlancia={updatePlancia}
+                planciaZoom={sessionData.planciaZoom}
+                planciaPosition={sessionData.planciaPosition}
+                canWrite={permissions.canWrite}
+                canSpawn={permissions.canSpawn}
+                onScheduleSave={scheduleSave}
+                isSidebarOpen={isSidebarOpen}
+                onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+                onCycleBackground={handleCycleBackground}
+              />
             </div>
-          )}
+
+            {/* Barra carte solo per il creatore, interna alla plancia */}
+            {permissions.canSpawn && (
+              <div className="barraCarte">
+                <div className="barraCarte-tray absolute z-10 bg-white-80 rounded-[32px] shadow border border-gray-200 px-4 py-3">
+                  <BarraCarte onAggiungiCarta={aggiungiCarta} />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="md:flex flex-col w-64 bg-gray-800">
-          <SidebarUtenti sessionId={sessionId} permissions={permissions} role={role} />
+        <div
+          className={`flex flex-col bg-gray-800 h-full overflow-hidden transition-all duration-300 ease-in-out ${
+            isSidebarOpen ? "w-40" : "w-0"
+          }`}
+        >
+          {isSidebarOpen && (
+            <div className="flex-1 overflow-y-auto">
+              <SidebarUtenti sessionId={sessionId} permissions={permissions} role={role} />
+            </div>
+          )}
         </div>
       </div>
     </DndContext>

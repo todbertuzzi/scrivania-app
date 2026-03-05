@@ -2,6 +2,107 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Configurazione minima Tailwind 4 per spaziature e colori
+   così utility come gap-2, bg-white, text-gray-700, ecc. funzionano. */
+@theme {
+  /* Spaziature base */
+  --spacing-0: 0px;
+  --spacing-px: 1px;
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-10: 2.5rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+  --spacing-24: 6rem;
+  --spacing-28: 7rem;
+  --spacing-32: 8rem;
+  --spacing-36: 9rem;
+  --spacing-40: 10rem;
+  --spacing-44: 11rem;
+  --spacing-48: 12rem;
+  --spacing-52: 13rem;
+  --spacing-56: 14rem;
+  --spacing-60: 15rem;
+  --spacing-64: 16rem;
+  --spacing-72: 18rem;
+  --spacing-80: 20rem;
+  --spacing-96: 24rem;
+
+  /* Colori base usati nell'app */
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+
+  --color-blue-50: #eff6ff;
+  --color-blue-300: #93c5fd;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+
+  --color-green-500: #22c55e;
+  --color-green-600: #16a34a;
+
+  --color-red-50: #fef2f2;
+  --color-red-300: #fca5a5;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+
+  --color-gray-800: #1f2933;
+
+  /* Dimensioni testo (per text-xs, text-sm, text-base, text-lg, ecc.) */
+  --text-xs: 0.75rem;    /* 12px */
+  --text-sm: 0.875rem;   /* 14px */
+  --text-base: 1rem;     /* 16px */
+  --text-lg: 1.125rem;   /* 18px */
+  --text-xl: 1.25rem;    /* 20px */
+  --text-2xl: 1.5rem;    /* 24px */
+  --text-3xl: 1.875rem;  /* 30px */
+
+  /* Opacità standard (per bg-opacity-80, bg-opacity-90, ecc.) */
+  --opacity-0: 0;
+  --opacity-5: 0.05;
+  --opacity-10: 0.1;
+  --opacity-20: 0.2;
+  --opacity-30: 0.3;
+  --opacity-40: 0.4;
+  --opacity-50: 0.5;
+  --opacity-60: 0.6;
+  --opacity-70: 0.7;
+  --opacity-75: 0.75;
+  --opacity-80: 0.8;
+  --opacity-90: 0.9;
+  --opacity-95: 0.95;
+  --opacity-100: 1;
+}
+
+/* Utility custom per background bianco semi-trasparente
+   (evitano color-mix così funzionano anche su browser che lo segnalano come invalido) */
+@layer utilities {
+  .bg-white-70 {
+    background-color: rgba(255, 255, 255, 0.7);
+  }
+
+  .bg-white-80 {
+    background-color: rgba(255, 255, 255, 0.8);
+  }
+
+  .bg-white-90 {
+    background-color: rgba(255, 255, 255, 0.9);
+  }
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -58,6 +159,12 @@ button:hover {
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
+}
+
+.border-b-2 {
+  border-bottom-width: 2px;
+    margin-bottom: 5px;
+    padding-bottom: 7px;
 }
 
 @media (prefers-color-scheme: light) {

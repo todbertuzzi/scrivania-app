@@ -22,7 +22,8 @@ export const getGameToolkitPath = (filename) => {
   if (isLocal) {
     return `/assets/new_vision_game_tool_kit_image/${filename}`;
   } else {
-    return `/assets/new_vision_game_tool_kit_image/${filename}`;
+    // In produzione, serve i file dal plugin WordPress come per getAssetPath
+    return `/wp-content/plugins/scrivania-collaborativa-api/js/app/assets/new_vision_game_tool_kit_image/${filename}`;
   }
 };
 

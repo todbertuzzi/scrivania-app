@@ -52,8 +52,8 @@ function ensureRootElement() {
     container.style.minHeight = "600px";
     container.style.border = "1px solid #ddd";
     container.style.backgroundColor = "#f9f9f9";
-    container.style.padding = "20px";
-    container.style.margin = "20px 0";
+    container.style.padding = "0px";
+    container.style.margin = "0px 0";
 
     // Aggiungi al DOM
     const targetContainer =

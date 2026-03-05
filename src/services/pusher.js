@@ -11,6 +11,10 @@ class PusherService {
     return Boolean(this.isConnected && this.channel);
   }
 
+  getPresenceMembers() {
+    return this.channel?.members || null;
+  }
+
   // Inizializza Pusher solo se non siamo in locale
   async init(sessionId) {
     const isLocal = window.location.hostname === 'localhost' || 

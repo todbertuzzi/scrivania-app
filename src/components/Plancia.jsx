@@ -5,7 +5,8 @@ import CartaDraggable from "./CartaDraggable";
 import { useCardRotation } from "../hooks/useCardRotation";
 import { useCardScale } from "../hooks/useCardScale";
 import { usePlanciaNavigation } from "../hooks/usePlanciaNavigation";
-
+import { LuUsers } from "react-icons/lu";
+import { TbBackground } from "react-icons/tb";
 const Plancia = ({
   carte,
   onRimuovi,
@@ -18,6 +19,9 @@ const Plancia = ({
   canWrite,
   canSpawn,
   onScheduleSave,
+  isSidebarOpen,
+  onToggleSidebar,
+  onCycleBackground,
 }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
   const areaRef = useRef(null);
@@ -79,6 +83,8 @@ const Plancia = ({
     return getAssetPath('card_front.jpg');
   };
 
+  const pannelloControlliBottom = canSpawn ? 210 : 35;
+
   return (
     <div
       ref={areaRef}
@@ -121,6 +127,7 @@ const Plancia = ({
           <CartaDraggable
             key={carta.id}
             carta={carta}
+            planciaZoom={planciaNav.planciaZoom}
             controlliVisibili={controlliVisibili}
             setControlliVisibili={setControlliVisibili}
             onRimuovi={onRimuovi}
@@ -138,8 +145,77 @@ const Plancia = ({
         ))}
       </div>
 
-      <div className="absolute bottom-3 right-3 bg-white bg-opacity-70 px-2 py-1 rounded text-sm">
-        Zoom: {Math.round(planciaNav.planciaZoom * 100)}%
+      {/* Controlli flottanti: zoom + toggle sidebar, in basso a destra */}
+      <div
+        className="absolute z-20 panello-controlli"
+        style={{ bottom: pannelloControlliBottom, right: 25 }}
+      >
+        <div className="flex items-center gap-2 bg-white-70 rounded-full shadow border border-gray-200 px-3 py-2">
+          <button
+            type="button"
+            className="h-7 w-7 flex items-center justify-center rounded-full bg-gray-800 text-white text-sm hover:bg-gray-100 hover:text-black"
+            onClick={() => {
+              if (!canWrite || !areaRef.current) return;
+              const rect = areaRef.current.getBoundingClientRect();
+              const fakeEvent = {
+                deltaY: -100,
+                clientX: rect.left + rect.width / 2,
+                clientY: rect.top + rect.height / 2,
+                preventDefault: () => {},
+              };
+              planciaNav.handleZoom(fakeEvent, areaRef);
+            }}
+            aria-label="Zoom in"
+          >
+            +
+          </button>
+
+          <div className="text-xs text-gray-700 min-w-[3rem] text-center">
+            {Math.round(planciaNav.planciaZoom * 100)}%
+          </div>
+
+          <button
+            type="button"
+            className="h-7 w-7 flex items-center justify-center rounded-full bg-gray-800 text-white text-sm hover:bg-gray-100 hover:text-black"
+            onClick={() => {
+              if (!canWrite || !areaRef.current) return;
+              const rect = areaRef.current.getBoundingClientRect();
+              const fakeEvent = {
+                deltaY: 100,
+                clientX: rect.left + rect.width / 2,
+                clientY: rect.top + rect.height / 2,
+                preventDefault: () => {},
+              };
+              planciaNav.handleZoom(fakeEvent, areaRef);
+            }}
+            aria-label="Zoom out"
+          >
+            -
+          </button>
+
+          {typeof onCycleBackground === 'function' && (
+            <button
+              type="button"
+              className="ml-1 h-7 px-2 text-white flex items-center bg-gray-800 justify-center rounded-full border border-gray-300 text-gray-700 text-xs hover:bg-gray-100 hover:text-black"
+              onClick={onCycleBackground}
+              aria-label="Cambia sfondo"
+            >
+              <TbBackground />
+            </button>
+          )}
+
+          {typeof onToggleSidebar === 'function' && (
+            <button
+              type="button"
+              className="ml-1 h-7 w-7 flex items-center justify-center bg-gray-800 text-white rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-black"
+              onClick={onToggleSidebar}
+              aria-label={isSidebarOpen ? "Nascondi elenco utenti" : "Mostra elenco utenti"}
+            >
+              {/* icona hamburger */}
+              <span className="text-base"><LuUsers /></span>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

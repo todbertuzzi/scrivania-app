@@ -32,12 +32,12 @@ const BarraCarte = ({ onAggiungiCarta }) => {
   };
 
   return (
-    <div className="">
-      <div className="holder flex gap-[20px]">
+    <div className="barraCarte-scroll w-full overflow-x-auto">
+      <div className="holder flex flex-nowrap gap-[20px] py-1">
         {carteMazzo.map((carta) => (
           <div
             key={carta.id}
-            className=" w-full  bg-gray-100 rounded shadow cursor-pointer overflow-hidden"
+            className="flex-none w-20 bg-gray-100 rounded shadow cursor-pointer overflow-hidden"
             onClick={() => handleClick(carta)}
           >
             <img

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "./ui/Card";
@@ -6,6 +6,7 @@ import CardControls from "./CardControls";
 
 const CartaDraggable = ({
   carta,
+  planciaZoom,
   controlliVisibili,
   setControlliVisibili,
   onRimuovi,
@@ -31,11 +32,47 @@ const CartaDraggable = ({
     disabled: !canWrite || rotazioneInCorso.current || scalaInCorso.current || isPanning,
   });
 
+  const x = carta.x ?? 100;
+  const y = carta.y ?? 100;
+
+  // Animazione low-impact per chi non può scrivere (viewer): ammorbidisce il “salto” tra snapshot.
+  // Durata in base alla distanza spaziale tra stato precedente e nuovo.
+  const prevPosRef = useRef(null);
+  const transitionMs = useMemo(() => {
+    if (canWrite) return 0;
+    const prev = prevPosRef.current;
+    if (!prev) return 0;
+
+    const dx = Number(x) - Number(prev.x);
+    const dy = Number(y) - Number(prev.y);
+    const zoom = typeof planciaZoom === 'number' && planciaZoom > 0 ? planciaZoom : 1;
+    const distancePx = Math.hypot(dx, dy) * zoom;
+
+    const SPEED_PX_PER_SEC = 2200;
+    const MIN_MS = 20;
+    const MAX_MS = 220;
+
+    const computed = (distancePx / SPEED_PX_PER_SEC) * 1000;
+    const clamped = Math.max(MIN_MS, Math.min(MAX_MS, computed));
+    return Math.round(clamped);
+  }, [canWrite, planciaZoom, x, y]);
+
+  useEffect(() => {
+    prevPosRef.current = { x, y };
+  }, [x, y]);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     position: "absolute",
-    left: carta.x || 100,
-    top: carta.y || 100,
+    left: x,
+    top: y,
+    ...(canWrite
+      ? {}
+      : {
+          transitionProperty: "left, top",
+          transitionDuration: `${transitionMs}ms`,
+          transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+        }),
   };
 
   return (
@@ -83,7 +120,7 @@ const CartaDraggable = ({
         )}
 
         <Card
-          className={`w-auto h-[150px] p-[10px] bg-white overflow-hidden ${
+          className={`w-[96px] h-[150px] p-[10px] bg-white overflow-hidden ${
             controlliVisibili === carta.id
               ? "ring-4 ring-blue-400 shadow-xl"
               : "shadow-lg"

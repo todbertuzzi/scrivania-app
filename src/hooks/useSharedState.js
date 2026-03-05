@@ -23,6 +23,7 @@ export const useSharedState = () => {
 
   const sessionIdRef = useRef(null);
   const stateVersionRef = useRef(1);
+  const sessionDataRef = useRef(sessionData);
   const tokenRef = useRef(null);
   const myUserIdRef = useRef(null);
   const restNonceRef = useRef(null);
@@ -40,6 +41,10 @@ export const useSharedState = () => {
   useEffect(() => {
     stateVersionRef.current = stateVersion;
   }, [stateVersion]);
+
+  useEffect(() => {
+    sessionDataRef.current = sessionData;
+  }, [sessionData]);
 
   const isLocalEnvironment = () => {
     return window.location.hostname === 'localhost' ||
@@ -158,9 +163,11 @@ export const useSharedState = () => {
       const data = await response.json();
       if (data?.snapshot) {
         setSessionData(data.snapshot);
+        sessionDataRef.current = data.snapshot;
       }
       if (typeof data?.state_version === 'number') {
         setStateVersion(data.state_version);
+        stateVersionRef.current = data.state_version;
       }
       dirtyRef.current = false;
     } finally {
@@ -223,24 +230,27 @@ export const useSharedState = () => {
     if (isLocalEnvironment()) return;
     if (!permissions.canWrite) return;
     if (!dirtyRef.current) return;
-    if (!sessionId) return;
+    const sessionIdToSave = sessionIdRef.current;
+    if (!sessionIdToSave) return;
     if (isSavingRef.current) return;
 
     isSavingRef.current = true;
     try {
-      const response = await apiFetch(`/wp-json/scrivania/v1/session/${sessionId}/snapshot`, {
+      const snapshotToSave = sessionDataRef.current;
+      const baseVersion = Number(stateVersionRef.current || 0);
+      const response = await apiFetch(`/wp-json/scrivania/v1/session/${sessionIdToSave}/snapshot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          base_version: stateVersion,
-          snapshot: sessionData,
+          base_version: baseVersion,
+          snapshot: snapshotToSave,
           reason,
         }),
       });
 
       if (response.status === 409) {
         // Conflitto: refetch e annulla dirty locale
-        await refetchSnapshot(sessionId);
+        await refetchSnapshot(sessionIdToSave);
         return;
       }
 
@@ -251,12 +261,13 @@ export const useSharedState = () => {
       const data = await response.json();
       if (typeof data?.state_version === 'number') {
         setStateVersion(data.state_version);
+        stateVersionRef.current = data.state_version;
       }
       dirtyRef.current = false;
     } finally {
       isSavingRef.current = false;
     }
-  }, [permissions.canWrite, sessionData, sessionId, stateVersion, refetchSnapshot]);
+  }, [permissions.canWrite, refetchSnapshot]);
 
   const scheduleSave = useCallback((reason = 'end-gesture', debounceMs = 600) => {
     if (saveTimerRef.current) {

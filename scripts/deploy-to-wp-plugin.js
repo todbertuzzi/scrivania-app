@@ -41,6 +41,7 @@ async function main() {
   const distJs = path.join(distDir, 'scrivania-app.js');
   const distCss = path.join(distDir, 'scrivania-assets', 'index.css');
   const publicAssetsDir = path.resolve(projectRoot, 'public', 'assets');
+  const srcBgsDir = path.resolve(projectRoot, 'src', 'assets', 'bgs');
 
   const pluginDir = path.resolve(projectRoot, '..', 'remote_inner', 'plugins', 'scrivania-collaborativa-api');
   const pluginAppDir = path.join(pluginDir, 'js', 'app');
@@ -72,6 +73,14 @@ async function main() {
     console.log('- Copiati assets statici');
   } else {
     console.log('- public/assets non trovato, skip');
+  }
+
+  // Backgrounds aggiuntivi da src/assets/bgs (per gli sfondi della plancia)
+  if (await exists(srcBgsDir)) {
+    await copyDir(srcBgsDir, path.join(pluginAppDir, 'assets', 'bgs'));
+    console.log('- Copiati background da src/assets/bgs');
+  } else {
+    console.log('- src/assets/bgs non trovato, skip background');
   }
 
   console.log('Deploy completato.');

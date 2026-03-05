@@ -59,7 +59,7 @@ const CardControls = ({
             onMouseDown={(e) => onStartScale(e, carta.id, carta.scale)}
             style={{ cursor: "ns-resize" }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="bg-white rounded-full shadow p-2"
+            className="bg-white rounded-full shadow p-2 text-black"
             aria-label="Ridimensiona carta"
           >
             <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} />

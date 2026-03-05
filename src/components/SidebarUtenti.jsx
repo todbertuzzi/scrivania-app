@@ -99,7 +99,7 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
       return;
     }
 
-    const offSucceeded = pusherService.subscribe('pusher:subscription_succeeded', (m) => {
+    const syncMembers = (m) => {
       const next = {};
       try {
         m.each((member) => {
@@ -113,6 +113,17 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
         // ignore
       }
       setMembersById(next);
+    };
+
+    // Se la sidebar viene riaperta, il canale presence è già sottoscritto e
+    // l'evento `pusher:subscription_succeeded` non verrà ri-emesso: recupera lo snapshot.
+    const existingMembers = pusherService.getPresenceMembers();
+    if (existingMembers && typeof existingMembers.each === 'function') {
+      syncMembers(existingMembers);
+    }
+
+    const offSucceeded = pusherService.subscribe('pusher:subscription_succeeded', (m) => {
+      syncMembers(m);
     });
 
     const offAdded = pusherService.subscribe('pusher:member_added', (member) => {
@@ -162,7 +173,7 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
   }, [canManageMembers]);
 
   return (
-    <div className="w-64 bg-white border-l border-gray-300 p-4 shadow-md h-full">
+    <div className="h-full bg-white border-l border-gray-300 p-4 shadow-md z-30">
       <h2 className="text-lg font-semibold mb-2">Utenti online</h2>
       {!pusherService.isReady() ? (
         <div className="text-sm text-gray-500">
@@ -180,7 +191,7 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
         </div>
       )}
 
-      <ul className="space-y-2">
+      <ul className="space-y-2 p-0">
         {members.map((utente) => {
           const isMe = myUserId && String(utente.id) === String(myUserId);
           const currentRole = rolesByUserId[String(utente.id)] || (isMe ? role : null);
@@ -188,9 +199,9 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
           const isEditor = currentRole === 'editor';
           const isRemoved = currentRole === 'removed' || currentRole === 'revoked';
           return (
-            <li key={utente.id} className="flex items-center gap-2 justify-between">
+            <li key={utente.id} className="flex items-start gap-2 justify-between flex-col border-b-2">
               <div className="flex items-center gap-2 min-w-0">
-              {utente.avatar_url ? (
+              {/* {utente.avatar_url ? (
                 <img
                   src={utente.avatar_url}
                   alt={utente.name}
@@ -198,7 +209,7 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
                 />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-gray-200" />
-              )}
+              )} */}
               <div className="flex flex-col min-w-0">
                 <span className="truncate">{utente.name}</span>
                 {isMe && <span className="text-xs text-blue-600">tu</span>}
