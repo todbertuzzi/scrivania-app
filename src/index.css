@@ -2,8 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Configurazione minima Tailwind 4 per spaziature e colori
-   così utility come gap-2, bg-white, text-gray-700, ecc. funzionano. */
+/* Configurazione Tailwind 4 CSS-first.
+  I token definiti qui alimentano le utility generate dal plugin Vite.
+  Manteniamo una base abbastanza completa per evitare casi in cui una utility
+  valida nel markup non venga emessa nel CSS finale. */
 @theme {
   /* Spaziature base */
   --spacing-0: 0px;
@@ -70,6 +72,28 @@
   --text-2xl: 1.5rem;    /* 24px */
   --text-3xl: 1.875rem;  /* 30px */
 
+  /* Font weight per utility come font-medium e font-semibold */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Radius per utility come rounded-lg, rounded-xl, rounded-2xl */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  /* Container width per utility max-w-* usate nell'app */
+  --container-xs: 20rem;
+  --container-sm: 24rem;
+  --container-md: 28rem;
+  --container-lg: 32rem;
+  --container-xl: 36rem;
+  --container-2xl: 42rem;
+
   /* Opacità standard (per bg-opacity-80, bg-opacity-90, ecc.) */
   --opacity-0: 0;
   --opacity-5: 0.05;
@@ -85,6 +109,14 @@
   --opacity-90: 0.9;
   --opacity-95: 0.95;
   --opacity-100: 1;
+
+  /* Ombre base per utility Tailwind come shadow-lg e shadow-xl */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.16), 0 4px 6px -4px rgb(0 0 0 / 0.12);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.16);
+  --shadow-2xl: 0 24px 50px -12px rgb(0 0 0 / 0.3);
 }
 
 /* Utility custom per background bianco semi-trasparente

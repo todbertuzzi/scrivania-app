@@ -36,6 +36,7 @@ const CartaDraggable = ({
   const y = carta.y ?? 100;
   const angle = Number.isFinite(Number(carta.angle)) ? Number(carta.angle) : 0;
   const scale = Number.isFinite(Number(carta.scale)) ? Number(carta.scale) : 1.0;
+  const isActiveCard = controlliVisibili === carta.id;
 
   // Animazione low-impact per chi non può scrivere (viewer): ammorbidisce il “salto” tra snapshot.
   // Durata in base alla distanza spaziale tra stato precedente e nuovo.
@@ -108,6 +109,7 @@ const CartaDraggable = ({
     position: "absolute",
     left: x,
     top: y,
+    zIndex: isDragging ? 1200 : isActiveCard ? 1100 : 1,
     ...(canWrite
       ? {}
       : {
@@ -169,6 +171,11 @@ const CartaDraggable = ({
         )}
 
         <Card
+          style={{
+            filter: isActiveCard
+              ? "drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28))"
+              : "drop-shadow(0 6px 10px rgba(0, 0, 0, 0.18))",
+          }}
           className={`w-[96px] h-[150px] p-[10px] bg-white overflow-hidden ${
             controlliVisibili === carta.id
               ? "ring-4 ring-blue-400 shadow-xl"
