@@ -7,6 +7,8 @@ import {
   faToggleOn,
 } from "@fortawesome/free-solid-svg-icons";
 
+const CONTROL_BUTTON_CLASS = "flex h-9 w-9 items-center justify-center rounded-full bg-white shadow";
+
 const CardControls = ({
   carta,
   onRimuovi,
@@ -29,7 +31,7 @@ const CardControls = ({
             }}
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
-            className="bg-white rounded-full shadow p-1"
+            className={CONTROL_BUTTON_CLASS}
           >
             <FontAwesomeIcon icon={faXmark} className="text-red-500" />
           </button>
@@ -44,7 +46,7 @@ const CardControls = ({
             onMouseDown={(e) => onStartRotation(e, carta.id, carta.angle, cardRefs.current[carta.id])}
             style={{ cursor: "grab" }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="bg-white rounded-full shadow p-1"
+            className={CONTROL_BUTTON_CLASS}
           >
             <FontAwesomeIcon icon={faRotate} className="text-blue-500" />
           </button>
@@ -59,7 +61,7 @@ const CardControls = ({
             onMouseDown={(e) => onStartScale(e, carta.id, carta.scale)}
             style={{ cursor: "ns-resize" }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="bg-white rounded-full shadow p-2 text-black"
+            className={`${CONTROL_BUTTON_CLASS} text-black`}
             aria-label="Ridimensiona carta"
           >
             <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} />
@@ -76,7 +78,7 @@ const CardControls = ({
               handleGiraCarta(carta.id);
             }}
             onPointerDown={(e) => e.stopPropagation()}
-            className="bg-white rounded-full shadow p-2"
+            className={CONTROL_BUTTON_CLASS}
             aria-label="Gira carta"
           >
             <FontAwesomeIcon

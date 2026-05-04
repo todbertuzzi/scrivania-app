@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import "./App.css";
 import { getAssetPath } from "./utils/paths";
+import { getDeckById, normalizeDeckId } from "./data/decks";
 import bgVerde from "./assets/bgs/background_verde.jpg";
 import bgLegno from "./assets/bgs/background_legno.jpg";
 const isLocalEnv =
@@ -30,6 +31,7 @@ const BACKGROUND_COUNT = LOCAL_BACKGROUNDS.length;
 const App = () => {
   const {
     sessionData,
+    sessionSettings,
     role,
     permissions,
     sessionId,
@@ -55,6 +57,13 @@ const App = () => {
     return getAssetPath(REMOTE_BACKGROUNDS[backgroundIndex]);
   }, [backgroundIndex]);
 
+  const activeDeckId = useMemo(
+    () => normalizeDeckId(sessionSettings?.mazzoId),
+    [sessionSettings?.mazzoId]
+  );
+
+  const activeDeck = useMemo(() => getDeckById(activeDeckId), [activeDeckId]);
+
   // Configurazione sensori per dnd-kit
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -79,15 +88,17 @@ const App = () => {
 
       const nuovaCarta = {
         ...carta,
-        isFront: true,
-        retro: null,
+        mazzoId: activeDeck.id,
+        templateId: carta.templateId || carta.id,
+        isFront: false,
+        retro: carta.img,
       };
 
       const nuoveCarte = [...sessionData.carte, nuovaCarta];
       updateCards(nuoveCarte);
       scheduleSave('spawn', 150);
     },
-    [permissions.canSpawn, scheduleSave, sessionData.carte, updateCards]
+    [activeDeck.id, permissions.canSpawn, scheduleSave, sessionData.carte, updateCards]
   );
 
   const aggiornaPosizione = useCallback(
@@ -133,7 +144,7 @@ const App = () => {
   );
 
   const giraCarta = useCallback(
-    (id, carteMazzo) => {
+    (id) => {
       if (!permissions.canWrite) {
         console.log("Non hai i permessi per girare le carte");
         return;
@@ -142,14 +153,11 @@ const App = () => {
       const nuoveCarte = sessionData.carte.map((carta) => {
         if (carta.id !== id) return carta;
 
-        if (carta.isFront && carta.retro === null) {
-          const carteDisponibili = carteMazzo.filter((c) => c.id !== carta.id);
-          const cartaRandom =
-            carteDisponibili[Math.floor(Math.random() * carteDisponibili.length)];
-          return { ...carta, isFront: !carta.isFront, retro: cartaRandom.img };
-        } else {
-          return { ...carta, isFront: !carta.isFront };
-        }
+        return {
+          ...carta,
+          isFront: !carta.isFront,
+          retro: carta.retro || carta.img,
+        };
       });
 
       updateCards(nuoveCarte);
@@ -275,6 +283,7 @@ const App = () => {
                 isSidebarOpen={isSidebarOpen}
                 onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
                 onCycleBackground={handleCycleBackground}
+                activeDeckId={activeDeck.id}
               />
             </div>
 
@@ -282,7 +291,10 @@ const App = () => {
             {permissions.canSpawn && isCardsTrayOpen && (
               <div className="barraCarte">
                 <div className="barraCarte-tray absolute z-10 bg-white-80 rounded-[32px] shadow border border-gray-200 px-4 py-3">
-                  <BarraCarte onAggiungiCarta={aggiungiCarta} />
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-gray-600">
+                    Mazzo: {activeDeck.label} · {activeDeck.description}
+                  </div>
+                  <BarraCarte deckId={activeDeck.id} onAggiungiCarta={aggiungiCarta} />
                 </div>
               </div>
             )}

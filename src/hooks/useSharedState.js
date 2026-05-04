@@ -7,6 +7,9 @@ export const useSharedState = () => {
     planciaZoom: 1,
     planciaPosition: { x: 0, y: 0 },
   });
+  const [sessionSettings, setSessionSettings] = useState({
+    mazzoId: 0,
+  });
 
   const [role, setRole] = useState('viewer');
   const [permissions, setPermissions] = useState({
@@ -24,6 +27,7 @@ export const useSharedState = () => {
   const sessionIdRef = useRef(null);
   const stateVersionRef = useRef(1);
   const sessionDataRef = useRef(sessionData);
+  const sessionSettingsRef = useRef(sessionSettings);
   const tokenRef = useRef(null);
   const myUserIdRef = useRef(null);
   const restNonceRef = useRef(null);
@@ -45,6 +49,10 @@ export const useSharedState = () => {
   useEffect(() => {
     sessionDataRef.current = sessionData;
   }, [sessionData]);
+
+  useEffect(() => {
+    sessionSettingsRef.current = sessionSettings;
+  }, [sessionSettings]);
 
   const isLocalEnvironment = () => {
     return window.location.hostname === 'localhost' ||
@@ -237,12 +245,14 @@ export const useSharedState = () => {
     isSavingRef.current = true;
     try {
       const snapshotToSave = sessionDataRef.current;
+      const settingsToSave = sessionSettingsRef.current;
       const baseVersion = Number(stateVersionRef.current || 0);
       const response = await apiFetch(`/wp-json/scrivania/v1/session/${sessionIdToSave}/snapshot`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           base_version: baseVersion,
+          sessione: settingsToSave,
           snapshot: snapshotToSave,
           reason,
         }),
@@ -295,6 +305,7 @@ export const useSharedState = () => {
       }
 
       if (isLocalEnvironment()) {
+        setSessionSettings({ mazzoId: 0 });
         setRole('admin');
         setPermissions({ canRead: true, canWrite: true, canSpawn: true, canManageMembers: true });
         setIsInitialized(true);
@@ -315,6 +326,19 @@ export const useSharedState = () => {
 
         setRole(session.role || 'viewer');
         setPermissions(session.permissions || { canRead: true, canWrite: false, canSpawn: false, canManageMembers: false });
+
+        const nextSettings = session?.sessione && typeof session.sessione === 'object'
+          ? session.sessione
+          : {};
+        const snapshotCards = Array.isArray(session?.snapshot?.carte) ? session.snapshot.carte : [];
+        const inferredDeckId = Number(snapshotCards.find((card) => Number.isFinite(Number(card?.mazzoId)))?.mazzoId);
+        const nextDeckId = Number(nextSettings.mazzoId);
+        setSessionSettings({
+          ...nextSettings,
+          mazzoId: Number.isFinite(nextDeckId)
+            ? (nextDeckId === 0 && Number.isFinite(inferredDeckId) && inferredDeckId > 0 ? inferredDeckId : nextDeckId)
+            : (Number.isFinite(inferredDeckId) ? inferredDeckId : 0),
+        });
 
         const newVersion = session.state_version || 1;
         setStateVersion(newVersion);
@@ -384,6 +408,7 @@ export const useSharedState = () => {
 
   return {
     sessionData,
+    sessionSettings,
     role,
     permissions,
     sessionId,

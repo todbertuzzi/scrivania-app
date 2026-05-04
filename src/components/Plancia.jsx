@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { getAssetPath } from '../utils/paths';
-import { carteMazzo } from "./BarraCarte";
+import { getDeckFrontImage } from "../data/decks";
 import CartaDraggable from "./CartaDraggable";
 import { useCardRotation } from "../hooks/useCardRotation";
 import { useCardScale } from "../hooks/useCardScale";
@@ -26,6 +25,7 @@ const Plancia = ({
   isSidebarOpen,
   onToggleSidebar,
   onCycleBackground,
+  activeDeckId,
 }) => {
   const [controlliVisibili, setControlliVisibili] = useState(null);
   const areaRef = useRef(null);
@@ -79,11 +79,11 @@ const Plancia = ({
   }, [cardRotation, cardScale, planciaNav, canWrite, onScheduleSave]);
 
   const handleGiraCarta = (id) => {
-    onGiraCarta(id, carteMazzo);
+    onGiraCarta(id);
   };
 
   const getCardFrontImage = () => {
-    return getAssetPath('card_front.jpg');
+    return getDeckFrontImage(activeDeckId);
   };
 
   const pannelloControlliBottom = canSpawn && isCardsTrayOpen ? 210 : 35;
@@ -144,6 +144,7 @@ const Plancia = ({
             onStartScale={cardScale.startScale}
             canWrite={canWrite}
             canSpawn={canSpawn}
+            activeDeckId={activeDeckId}
           />
         ))}
       </div>

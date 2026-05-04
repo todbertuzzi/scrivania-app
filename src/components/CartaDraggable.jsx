@@ -3,6 +3,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Card } from "./ui/Card";
 import CardControls from "./CardControls";
+import { getCardLayout } from "../data/decks";
 
 const CartaDraggable = ({
   carta,
@@ -20,6 +21,7 @@ const CartaDraggable = ({
   onStartScale,
   canWrite,
   canSpawn,
+  activeDeckId,
 }) => {
   const {
     attributes,
@@ -37,6 +39,11 @@ const CartaDraggable = ({
   const angle = Number.isFinite(Number(carta.angle)) ? Number(carta.angle) : 0;
   const scale = Number.isFinite(Number(carta.scale)) ? Number(carta.scale) : 1.0;
   const isActiveCard = controlliVisibili === carta.id;
+  const cardLayout = useMemo(
+    () => getCardLayout(carta.mazzoId, activeDeckId),
+    [activeDeckId, carta.mazzoId]
+  );
+  const mediaFitClass = cardLayout.imageFit === "contain" ? "object-contain" : "object-cover";
 
   // Animazione low-impact per chi non può scrivere (viewer): ammorbidisce il “salto” tra snapshot.
   // Durata in base alla distanza spaziale tra stato precedente e nuovo.
@@ -172,11 +179,13 @@ const CartaDraggable = ({
 
         <Card
           style={{
+            width: `${cardLayout.frameWidth}px`,
+            aspectRatio: cardLayout.aspectRatio,
             filter: isActiveCard
               ? "drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28))"
               : "drop-shadow(0 6px 10px rgba(0, 0, 0, 0.18))",
           }}
-          className={`w-[96px] h-[150px] p-[10px] bg-white overflow-hidden ${
+          className={`bg-white overflow-hidden ${
             controlliVisibili === carta.id
               ? "ring-4 ring-blue-400 shadow-xl"
               : "shadow-lg"
@@ -186,13 +195,13 @@ const CartaDraggable = ({
             <img
               src={carta.frontImg || getCardFrontImage()}
               alt="Fronte carta"
-              className="w-full h-full object-cover rounded pointer-events-none"
+              className={`w-full h-full rounded pointer-events-none ${mediaFitClass}`}
             />
           ) : (
             <img
               src={carta.retro || carta.img}
               alt="Retro carta"
-              className="w-full h-full object-cover rounded pointer-events-none"
+              className={`w-full h-full rounded pointer-events-none ${mediaFitClass}`}
             />
           )}
         </Card>

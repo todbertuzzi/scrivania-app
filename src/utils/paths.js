@@ -14,18 +14,19 @@ export const getAssetPath = (filename) => {
   }
 };
 
-export const getGameToolkitPath = (filename) => {
+export const getDeckAssetPath = (deckId, filename) => {
   const isLocal = window.location.hostname === 'localhost' || 
                   window.location.hostname === '127.0.0.1' ||
                   window.location.port !== '';
 
   if (isLocal) {
-    return `/assets/new_vision_game_tool_kit_image/${filename}`;
+    return `/assets/mazzo_${deckId}/${filename}`;
   } else {
-    // In produzione, serve i file dal plugin WordPress come per getAssetPath
-    return `/wp-content/plugins/scrivania-collaborativa-api/js/app/assets/new_vision_game_tool_kit_image/${filename}`;
+    return `/wp-content/plugins/scrivania-collaborativa-api/js/app/assets/mazzo_${deckId}/${filename}`;
   }
 };
+
+export const getGameToolkitPath = (filename) => getDeckAssetPath(0, `cards/${filename}`);
 
 // Utility per debug - mostra quale ambiente è stato rilevato
 export const getEnvironmentInfo = () => {
