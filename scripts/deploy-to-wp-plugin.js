@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { loadAndValidateDeckCatalog } from './deck-catalog.js';
 
 async function exists(filePath) {
   try {
@@ -24,6 +25,9 @@ async function copyDir(srcDir, destDir) {
   await ensureDir(destDir);
   const entries = await fs.readdir(srcDir, { withFileTypes: true });
   for (const entry of entries) {
+    if (entry.name === '.DS_Store') {
+      continue;
+    }
     const src = path.join(srcDir, entry.name);
     const dest = path.join(destDir, entry.name);
     if (entry.isDirectory()) {
@@ -32,6 +36,17 @@ async function copyDir(srcDir, destDir) {
       await copyFile(src, dest);
     }
   }
+}
+
+async function resetGeneratedDir(dirPath, allowedParent, expectedName) {
+  const resolvedDir = path.resolve(dirPath);
+  const resolvedParent = path.resolve(allowedParent);
+  if (path.dirname(resolvedDir) !== resolvedParent || path.basename(resolvedDir) !== expectedName) {
+    throw new Error(`Pulizia rifiutata per percorso non previsto: ${resolvedDir}`);
+  }
+
+  await fs.rm(resolvedDir, { recursive: true, force: true });
+  await ensureDir(resolvedDir);
 }
 
 async function main() {
@@ -45,6 +60,10 @@ async function main() {
 
   const pluginDir = path.resolve(projectRoot, '..', 'remote_inner', 'plugins', 'scrivania-collaborativa-api');
   const pluginAppDir = path.join(pluginDir, 'js', 'app');
+  const pluginConfigDir = path.join(pluginDir, 'config');
+
+  // Valida l'intero catalogo prima di toccare gli artefatti generati nel plugin.
+  const { rawManifest, decks } = await loadAndValidateDeckCatalog(projectRoot);
 
   if (!(await exists(distJs))) {
     throw new Error(`Build JS non trovato: ${distJs}. Esegui prima \`npm run build\`.`);
@@ -52,8 +71,16 @@ async function main() {
 
   console.log('Deploy build → plugin WP');
   console.log(`- Plugin dir: ${pluginDir}`);
+  console.log(`- Catalogo validato: ${decks.length} mazzi`);
 
   await ensureDir(pluginAppDir);
+  await ensureDir(pluginConfigDir);
+
+  await copyFile(
+    path.resolve(projectRoot, 'src', 'data', 'decks.json'),
+    path.join(pluginConfigDir, 'decks.json'),
+  );
+  console.log(`- Sincronizzato catalogo mazzi (${JSON.parse(rawManifest).schemaVersion})`);
 
   // JS bundle
   await copyFile(distJs, path.join(pluginAppDir, 'scrivania-app.js'));
@@ -61,6 +88,7 @@ async function main() {
 
   // CSS bundle (se presente)
   if (await exists(distCss)) {
+    await resetGeneratedDir(path.join(pluginAppDir, 'scrivania-assets'), pluginAppDir, 'scrivania-assets');
     await copyFile(distCss, path.join(pluginAppDir, 'scrivania-assets', 'index.css'));
     console.log('- Copiato index.css');
   } else {
@@ -69,6 +97,7 @@ async function main() {
 
   // Static assets (immagini)
   if (await exists(publicAssetsDir)) {
+    await resetGeneratedDir(path.join(pluginAppDir, 'assets'), pluginAppDir, 'assets');
     await copyDir(publicAssetsDir, path.join(pluginAppDir, 'assets'));
     console.log('- Copiati assets statici');
   } else {

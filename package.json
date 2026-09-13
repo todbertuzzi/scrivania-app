@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "dev:local": "VITE_APP_ENV=local vite",
-    "build": "vite build",
-    "build:wp": "vite build && node scripts/deploy-to-wp-plugin.js",
+    "validate:decks": "node scripts/validate-decks.js",
+    "build": "npm run validate:decks && vite build",
+    "build:wp": "npm run build && node scripts/deploy-to-wp-plugin.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },

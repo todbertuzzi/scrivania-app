@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { pusherService } from '../services/pusher';
+import { DEFAULT_DECK_ID, isValidDeckId, normalizeDeckId } from '../data/decks';
 
 export const useSharedState = () => {
   const [sessionData, setSessionData] = useState({
@@ -8,7 +9,7 @@ export const useSharedState = () => {
     planciaPosition: { x: 0, y: 0 },
   });
   const [sessionSettings, setSessionSettings] = useState({
-    mazzoId: 0,
+    mazzoId: DEFAULT_DECK_ID,
   });
 
   const [role, setRole] = useState('viewer');
@@ -122,14 +123,14 @@ export const useSharedState = () => {
     }
   }, []);
 
-  const apiFetch = async (url, options = {}) => {
+  const apiFetch = useCallback(async (url, options = {}) => {
     const headers = new Headers(options.headers || {});
     const nonce = getNonce();
     if (nonce) {
       headers.set('X-WP-Nonce', nonce);
     }
     return fetch(url, { credentials: 'include', ...options, headers });
-  };
+  }, []);
 
   const resolveSession = useCallback(async (token) => {
     const response = await apiFetch('/wp-json/scrivania/v1/get-session', {
@@ -144,7 +145,7 @@ export const useSharedState = () => {
     }
 
     return response.json();
-  }, []);
+  }, [apiFetch]);
 
   const roleToPermissions = (nextRole) => {
     if (nextRole === 'admin') {
@@ -181,7 +182,7 @@ export const useSharedState = () => {
     } finally {
       isRefetchingRef.current = false;
     }
-  }, []);
+  }, [apiFetch]);
 
   const setupPusherListeners = useCallback(() => {
     pusherService.subscribe('state-updated', (data) => {
@@ -277,7 +278,7 @@ export const useSharedState = () => {
     } finally {
       isSavingRef.current = false;
     }
-  }, [permissions.canWrite, refetchSnapshot]);
+  }, [apiFetch, permissions.canWrite, refetchSnapshot]);
 
   const scheduleSave = useCallback((reason = 'end-gesture', debounceMs = 600) => {
     if (saveTimerRef.current) {
@@ -305,7 +306,7 @@ export const useSharedState = () => {
       }
 
       if (isLocalEnvironment()) {
-        setSessionSettings({ mazzoId: 0 });
+        setSessionSettings({ mazzoId: DEFAULT_DECK_ID });
         setRole('admin');
         setPermissions({ canRead: true, canWrite: true, canSpawn: true, canManageMembers: true });
         setIsInitialized(true);
@@ -331,13 +332,16 @@ export const useSharedState = () => {
           ? session.sessione
           : {};
         const snapshotCards = Array.isArray(session?.snapshot?.carte) ? session.snapshot.carte : [];
-        const inferredDeckId = Number(snapshotCards.find((card) => Number.isFinite(Number(card?.mazzoId)))?.mazzoId);
+        const inferredDeckId = Number(snapshotCards.find((card) => isValidDeckId(card?.mazzoId))?.mazzoId);
         const nextDeckId = Number(nextSettings.mazzoId);
+        const resolvedDeckId = isValidDeckId(nextDeckId)
+          ? (nextDeckId === DEFAULT_DECK_ID && isValidDeckId(inferredDeckId) && inferredDeckId !== DEFAULT_DECK_ID
+            ? inferredDeckId
+            : nextDeckId)
+          : normalizeDeckId(inferredDeckId);
         setSessionSettings({
           ...nextSettings,
-          mazzoId: Number.isFinite(nextDeckId)
-            ? (nextDeckId === 0 && Number.isFinite(inferredDeckId) && inferredDeckId > 0 ? inferredDeckId : nextDeckId)
-            : (Number.isFinite(inferredDeckId) ? inferredDeckId : 0),
+          mazzoId: resolvedDeckId,
         });
 
         const newVersion = session.state_version || 1;
