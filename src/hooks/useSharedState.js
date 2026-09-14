@@ -17,6 +17,7 @@ export const useSharedState = () => {
     canRead: true,
     canWrite: false,
     canSpawn: false,
+    canRemove: false,
     canManageMembers: false,
   });
   const [accessRevoked, setAccessRevoked] = useState(false);
@@ -149,12 +150,12 @@ export const useSharedState = () => {
 
   const roleToPermissions = (nextRole) => {
     if (nextRole === 'admin') {
-      return { canRead: true, canWrite: true, canSpawn: true, canManageMembers: true };
+      return { canRead: true, canWrite: true, canSpawn: true, canRemove: true, canManageMembers: true };
     }
     if (nextRole === 'editor') {
-      return { canRead: true, canWrite: true, canSpawn: false, canManageMembers: false };
+      return { canRead: true, canWrite: true, canSpawn: true, canRemove: true, canManageMembers: false };
     }
-    return { canRead: true, canWrite: false, canSpawn: false, canManageMembers: false };
+    return { canRead: true, canWrite: false, canSpawn: false, canRemove: false, canManageMembers: false };
   };
 
   const refetchSnapshot = useCallback(async (sessionIdToFetch) => {
@@ -308,7 +309,7 @@ export const useSharedState = () => {
       if (isLocalEnvironment()) {
         setSessionSettings({ mazzoId: DEFAULT_DECK_ID });
         setRole('admin');
-        setPermissions({ canRead: true, canWrite: true, canSpawn: true, canManageMembers: true });
+        setPermissions({ canRead: true, canWrite: true, canSpawn: true, canRemove: true, canManageMembers: true });
         setIsInitialized(true);
         return;
       }
@@ -326,7 +327,7 @@ export const useSharedState = () => {
         sessionIdRef.current = newSessionId;
 
         setRole(session.role || 'viewer');
-        setPermissions(session.permissions || { canRead: true, canWrite: false, canSpawn: false, canManageMembers: false });
+        setPermissions(session.permissions || { canRead: true, canWrite: false, canSpawn: false, canRemove: false, canManageMembers: false });
 
         const nextSettings = session?.sessione && typeof session.sessione === 'object'
           ? session.sessione

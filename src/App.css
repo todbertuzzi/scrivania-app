@@ -1,6 +1,12 @@
 
 
 /* L'area plancia deve occupare tutta la viewport disponibile */
+#root,
+#root .plancia-container,
+#root .barraCarte-tray {
+  box-sizing: border-box;
+}
+
 .planciaHolder {
   width: 100%;
   height: 100%;
@@ -61,4 +67,155 @@
 
 .read-the-docs {
   color: #888;
+}
+
+/* Dimensioni esplicite: il padding globale dei button non deve dilatare i comandi. */
+#root .scrivania-card-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid rgba(31, 41, 51, 0.12);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(20, 35, 30, 0.16);
+}
+
+#root .scrivania-card-control .scrivania-scale-icon {
+  color: #1f2933;
+}
+
+.scrivania-workspace { position: relative; isolation: isolate; }
+.scrivania-sidebar {
+  position: relative;
+  z-index: 40;
+  flex: 0 0 auto;
+  width: 0;
+  min-height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  transition: width 220ms ease, visibility 220ms;
+}
+.scrivania-sidebar.is-open { width: 300px; visibility: visible; }
+.scrivania-members {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 280px;
+  height: calc(100% - 24px);
+  margin: 12px 12px 12px 8px;
+  overflow: hidden;
+  color: #263c35;
+  background: rgba(250, 252, 249, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 28px;
+  box-shadow: 0 12px 36px rgba(16, 37, 27, 0.16);
+  backdrop-filter: blur(16px);
+}
+.scrivania-members-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 18px;
+  border-bottom: 1px solid rgba(38, 60, 53, 0.09);
+}
+.scrivania-members-symbol {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: #e5eee7;
+}
+.scrivania-members-heading { flex: 1; min-width: 0; }
+#root .scrivania-members-heading h2 { margin: 0; font-size: 16px; font-weight: 650; line-height: 1.4; color: #263c35; }
+#root .scrivania-members-presence { display: flex; align-items: center; gap: 5px; margin: 4px 0 0; font-size: 11px; color: #62736b; }
+.scrivania-presence-dot { width: 6px; height: 6px; border-radius: 50%; background: #9aa69f; flex-shrink: 0; }
+.scrivania-presence-dot.is-connected { background: #41825a; box-shadow: 0 0 0 3px rgba(65, 130, 90, 0.09); }
+#root .scrivania-sidebar-close,
+#root .scrivania-sidebar-open {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(38, 60, 53, 0.12);
+  border-radius: 50%;
+  background: #fff;
+  color: #263c35;
+  cursor: pointer;
+}
+#root .scrivania-sidebar-close { flex: 0 0 30px; width: 30px; height: 30px; min-height: 0; }
+#root .scrivania-sidebar-open {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 40;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 24px;
+  background: rgba(250, 252, 249, 0.94);
+  box-shadow: 0 3px 12px rgba(16, 37, 27, 0.12);
+  font-size: 13px;
+  font-weight: 600;
+}
+.scrivania-members-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 12px; scrollbar-width: thin; scrollbar-color: #bbc9be transparent; }
+#root .scrivania-members-hint { color: #65736b; margin: 0 4px 14px; font-size: 12px; line-height: 1.6; }
+#root .scrivania-members-error { color: #9a3838; font-size: 12px; margin: 0 4px 14px; }
+#root .scrivania-members-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.scrivania-member { padding: 12px; border: 1px solid #e2e8e2; border-radius: 18px; background: rgba(255, 255, 255, 0.9); }
+.scrivania-member-info { display: flex; align-items: center; gap: 10px; }
+.scrivania-member-avatar { display: grid; place-items: center; flex: 0 0 36px; height: 36px; overflow: hidden; border-radius: 50%; background: #eaf0e8; color: #4b6856; font-size: 12px; font-weight: 650; }
+.scrivania-member-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.scrivania-member-details { flex: 1; min-width: 0; }
+.scrivania-member-name { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+.scrivania-member-name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scrivania-member-self { font-size: 10px; font-weight: 500; color: #66786e; background: #f0f4ee; padding: 1px 5px; border-radius: 5px; }
+.scrivania-member-role { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; color: #778278; }
+.scrivania-member-role.can-edit { color: #39704e; }
+.scrivania-member.is-revoked .scrivania-member-role { color: #a04444; }
+.scrivania-member-actions { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #edf0eb; }
+#root .scrivania-member-permission,
+#root .scrivania-member-revoke {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 5px 8px;
+  border: 1px solid #dce4dc;
+  border-radius: 10px;
+  background: #f5f8f3;
+  color: #49614f;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+#root .scrivania-member-permission { flex: 1; }
+#root .scrivania-member-permission.is-editor { color: #fff; background: #355c45; border-color: #355c45; }
+#root .scrivania-member-revoke { color: #a05050; background: transparent; border-color: transparent; padding-inline: 2px; }
+#root .scrivania-member-revoke:hover { color: #8b3030; background: #fff0f0; }
+#root .scrivania-member-permission:hover { border-color: #789780; }
+#root .scrivania-sidebar-close:hover,
+#root .scrivania-sidebar-open:hover { background: #eaf0e8; border-color: #bccdbd; }
+#root .scrivania-members button:focus-visible,
+#root .scrivania-sidebar-open:focus-visible,
+#root .scrivania-card-control:focus-visible { outline: 2px solid #41825a; outline-offset: 3px; }
+.scrivania-members-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px 14px; text-align: center; color: #708276; }
+#root .scrivania-members-empty p { margin: 0; font-size: 13px; font-weight: 500; }
+.scrivania-members-empty span { font-size: 12px; line-height: 1.6; }
+.scrivania-members-footer { padding: 14px 16px; border-top: 1px solid rgba(38, 60, 53, 0.08); font-size: 11px; color: #7b887e; text-align: center; }
+@media (max-width: 767px) {
+  .scrivania-sidebar { position: absolute; top: 12px; right: 12px; bottom: 12px; max-width: calc(100% - 24px); }
+  .scrivania-sidebar.is-open { width: 280px; }
+  .scrivania-members { width: 100%; height: 100%; margin: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scrivania-sidebar { transition: none; }
 }

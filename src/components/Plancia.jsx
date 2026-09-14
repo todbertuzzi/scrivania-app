@@ -4,7 +4,6 @@ import CartaDraggable from "./CartaDraggable";
 import { useCardRotation } from "../hooks/useCardRotation";
 import { useCardScale } from "../hooks/useCardScale";
 import { usePlanciaNavigation } from "../hooks/usePlanciaNavigation";
-import { LuUsers } from "react-icons/lu";
 import { TbBackground } from "react-icons/tb";
 import { PiCardsThreeLight } from "react-icons/pi";
 
@@ -19,11 +18,10 @@ const Plancia = ({
   onUpdatePlancia,
   canWrite,
   canSpawn,
+  canRemove,
   isCardsTrayOpen,
   onToggleCardsTray,
   onScheduleSave,
-  isSidebarOpen,
-  onToggleSidebar,
   onCycleBackground,
   activeDeckId,
 }) => {
@@ -143,13 +141,13 @@ const Plancia = ({
             onStartRotation={cardRotation.startRotation}
             onStartScale={cardScale.startScale}
             canWrite={canWrite}
-            canSpawn={canSpawn}
+            canRemove={canRemove}
             activeDeckId={activeDeckId}
           />
         ))}
       </div>
 
-      {/* Controlli flottanti: zoom + toggle sidebar, in basso a destra */}
+      {/* Controlli flottanti: zoom, sfondo e mazzo, in basso a destra */}
       <div
         className="absolute z-20 panello-controlli"
         style={{ bottom: pannelloControlliBottom, right: 25 }}
@@ -219,17 +217,7 @@ const Plancia = ({
             </button>
           )}
 
-          {typeof onToggleSidebar === 'function' && (
-            <button
-              type="button"
-              className="ml-1 h-7 w-7 flex items-center justify-center bg-gray-800 text-white rounded-full border border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-black"
-              onClick={onToggleSidebar}
-              aria-label={isSidebarOpen ? "Nascondi elenco utenti" : "Mostra elenco utenti"}
-            >
-              {/* icona hamburger */}
-              <span className="text-base"><LuUsers size={28} /></span>
-            </button>
-          )}
+
         </div>
       </div>
     </div>

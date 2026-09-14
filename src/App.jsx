@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import { LuUsers } from "react-icons/lu";
 import Plancia from "./components/Plancia";
 import SidebarUtenti from "./components/SidebarUtenti";
 import BarraCarte from "./components/BarraCarte";
@@ -46,7 +47,17 @@ const App = () => {
     scheduleSave,
   } = useSharedState();
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => window.matchMedia("(min-width: 768px)").matches);
+  const sidebarOpenRef = useRef(null);
+  const sidebarCloseRef = useRef(null);
+  const openSidebar = () => {
+    setIsSidebarOpen(true);
+    requestAnimationFrame(() => sidebarCloseRef.current?.focus());
+  };
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+    requestAnimationFrame(() => sidebarOpenRef.current?.focus());
+  };
   const [isCardsTrayOpen, setIsCardsTrayOpen] = useState(true);
   const [backgroundIndex, setBackgroundIndex] = useState(0);
 
@@ -82,7 +93,7 @@ const App = () => {
   const aggiungiCarta = useCallback(
     (carta) => {
       if (!permissions.canSpawn) {
-        console.log("Solo l'admin può aggiungere carte");
+        console.log("Non hai i permessi per aggiungere carte");
         return;
       }
 
@@ -111,8 +122,8 @@ const App = () => {
 
   const rimuoviCarta = useCallback(
     (id) => {
-      if (!permissions.canSpawn) {
-        console.log("Solo l'admin può rimuovere carte");
+      if (!permissions.canRemove) {
+        console.log("Non hai i permessi per rimuovere carte");
         return;
       }
 
@@ -120,7 +131,7 @@ const App = () => {
       updateCards(nuoveCarte);
       scheduleSave('remove', 150);
     },
-    [permissions.canSpawn, scheduleSave, sessionData.carte, updateCards]
+    [permissions.canRemove, scheduleSave, sessionData.carte, updateCards]
   );
 
   const aggiornaAngolo = useCallback(
@@ -226,7 +237,7 @@ const App = () => {
       onDragEnd={handleDragEnd}
     >
       <div
-        className="flex h-screen bg-gray-100"
+        className="scrivania-workspace flex h-screen bg-gray-100"
         style={{
           backgroundImage: `url(${currentBackground})`,
           backgroundSize: "cover",
@@ -262,7 +273,7 @@ const App = () => {
           </span>
         </div>
 
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <div className="planciaHolder flex flex-col">
             <div className="flex-1 p-0 overflow-hidden">
               <Plancia
@@ -277,17 +288,16 @@ const App = () => {
                 planciaPosition={sessionData.planciaPosition}
                 canWrite={permissions.canWrite}
                 canSpawn={permissions.canSpawn}
+                canRemove={permissions.canRemove}
                 isCardsTrayOpen={isCardsTrayOpen}
                 onToggleCardsTray={() => setIsCardsTrayOpen((prev) => !prev)}
                 onScheduleSave={scheduleSave}
-                isSidebarOpen={isSidebarOpen}
-                onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
                 onCycleBackground={handleCycleBackground}
                 activeDeckId={activeDeck.id}
               />
             </div>
 
-            {/* Barra carte solo per il creatore, interna alla plancia */}
+            {/* Barra carte per creatore ed editor autorizzati, interna alla plancia */}
             {permissions.canSpawn && isCardsTrayOpen && (
               <div className="barraCarte">
                 <div className="barraCarte-tray absolute z-10 bg-white-80 rounded-[32px] shadow border border-gray-200 px-4 py-3">
@@ -301,17 +311,40 @@ const App = () => {
           </div>
         </div>
 
-        <div
-          className={`flex flex-col bg-gray-800 h-full overflow-hidden transition-all duration-300 ease-in-out ${
-            isSidebarOpen ? "w-40" : "w-0"
-          }`}
+        {!isSidebarOpen && (
+          <button
+            ref={sidebarOpenRef}
+            type="button"
+            className="scrivania-sidebar-open"
+            onClick={openSidebar}
+            aria-label="Apri pannello partecipanti"
+            aria-controls="scrivania-members-panel"
+            aria-expanded="false"
+          >
+            <LuUsers size={18} aria-hidden="true" /> Partecipanti
+          </button>
+        )}
+        <aside
+          id="scrivania-members-panel"
+          className={`scrivania-sidebar ${isSidebarOpen ? 'is-open' : ''}`}
+          aria-label="Partecipanti alla scrivania"
+          aria-hidden={!isSidebarOpen}
+          inert={!isSidebarOpen}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              event.stopPropagation();
+              closeSidebar();
+            }
+          }}
         >
-          {isSidebarOpen && (
-            <div className="flex-1 overflow-y-auto">
-              <SidebarUtenti sessionId={sessionId} permissions={permissions} role={role} />
-            </div>
-          )}
-        </div>
+          <SidebarUtenti
+            sessionId={sessionId}
+            permissions={permissions}
+            role={role}
+            onClose={closeSidebar}
+            closeButtonRef={sidebarCloseRef}
+          />
+        </aside>
       </div>
     </DndContext>
   );

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { LuUsers, LuPanelRightClose, LuShieldCheck, LuEye, LuPencil } from 'react-icons/lu';
 import { pusherService } from '../services/pusher';
 
-const SidebarUtenti = ({ sessionId, permissions, role }) => {
+const SidebarUtenti = ({ sessionId, permissions, role, onClose, closeButtonRef }) => {
   const [membersById, setMembersById] = useState({});
   const [rolesByUserId, setRolesByUserId] = useState({});
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
@@ -127,6 +128,7 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
     });
 
     const offAdded = pusherService.subscribe('pusher:member_added', (member) => {
+      fetchRoles();
       setMembersById((prev) => ({
         ...prev,
         [String(member.id)]: {
@@ -150,7 +152,7 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
       offAdded();
       offRemoved();
     };
-  }, []);
+  }, [fetchRoles]);
 
   useEffect(() => {
     fetchRoles();
@@ -172,81 +174,105 @@ const SidebarUtenti = ({ sessionId, permissions, role }) => {
     return () => off();
   }, [canManageMembers]);
 
+  const isConnected = pusherService.isReady();
+
   return (
-    <div className="h-full bg-white border-l border-gray-300 p-4 shadow-md z-30">
-      <h2 className="text-lg font-semibold mb-2">Utenti online</h2>
-      {!pusherService.isReady() ? (
-        <div className="text-sm text-gray-500">
-          Realtime non attivo (Pusher non connesso)
+    <section className="scrivania-members" aria-labelledby="scrivania-members-title">
+      <header className="scrivania-members-header">
+        <span className="scrivania-members-symbol" aria-hidden="true"><LuUsers size={20} /></span>
+        <div className="scrivania-members-heading">
+          <h2 id="scrivania-members-title">Partecipanti</h2>
+          <p className="scrivania-members-presence" role="status">
+            <span className={`scrivania-presence-dot ${isConnected ? 'is-connected' : ''}`} aria-hidden="true" />
+            {isConnected ? `${members.length} ${members.length === 1 ? 'persona online' : 'persone online'}` : 'Connessione non attiva'}
+          </p>
         </div>
-      ) : (
-        <div className="text-sm text-gray-500 mb-3">
-          {members.length} connessi
-        </div>
-      )}
+        <button
+          ref={closeButtonRef}
+          type="button"
+          className="scrivania-sidebar-close"
+          onClick={onClose}
+          aria-label="Chiudi pannello partecipanti"
+          aria-controls="scrivania-members-panel"
+          aria-expanded="true"
+          title="Chiudi partecipanti"
+        >
+          <LuPanelRightClose size={18} />
+        </button>
+      </header>
 
-      {canManageMembers && (
-        <div className="text-xs text-gray-500 mb-2">
-          {isLoadingRoles ? 'Caricamento permessi…' : rolesError ? `Permessi: ${rolesError}` : 'Permessi pronti'}
-        </div>
-      )}
+      <div className="scrivania-members-body">
+        {canManageMembers && (
+          <p className="scrivania-members-hint">Scegli chi può modificare la scrivania.</p>
+        )}
+        {canManageMembers && isLoadingRoles && <p className="scrivania-members-hint" role="status">Caricamento permessi…</p>}
+        {canManageMembers && rolesError && (
+          <p className="scrivania-members-error" role="alert">Impossibile aggiornare i permessi. Riprova tra poco.</p>
+        )}
 
-      <ul className="space-y-2 p-0">
-        {members.map((utente) => {
-          const isMe = myUserId && String(utente.id) === String(myUserId);
-          const currentRole = rolesByUserId[String(utente.id)] || (isMe ? role : null);
-          const isAdmin = currentRole === 'admin';
-          const isEditor = currentRole === 'editor';
-          const isRemoved = currentRole === 'removed' || currentRole === 'revoked';
-          return (
-            <li key={utente.id} className="flex items-start gap-2 justify-between flex-col border-b-2">
-              <div className="flex items-center gap-2 min-w-0">
-              {/* {utente.avatar_url ? (
-                <img
-                  src={utente.avatar_url}
-                  alt={utente.name}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-200" />
-              )} */}
-              <div className="flex flex-col min-w-0">
-                <span className="truncate">{utente.name}</span>
-                {isMe && <span className="text-xs text-blue-600">tu</span>}
-                {currentRole && !isMe && (
-                  <span className={`text-xs ${isRemoved ? 'text-red-600' : 'text-gray-500'}`}>
-                    {isRemoved ? 'revocato' : currentRole}
+        {members.length === 0 && (
+          <div className="scrivania-members-empty">
+            <LuUsers size={28} aria-hidden="true" />
+            <p>{isConnected ? 'In attesa dei partecipanti' : 'Elenco partecipanti non disponibile'}</p>
+            <span>{isConnected ? 'Le persone collegate compariranno qui.' : 'L’elenco si aggiornerà quando la connessione sarà disponibile.'}</span>
+          </div>
+        )}
+
+        <ul className="scrivania-members-list">
+          {members.map((utente) => {
+            const isMe = myUserId && String(utente.id) === String(myUserId);
+            const currentRole = isMe ? role : rolesByUserId[String(utente.id)];
+            const isAdmin = currentRole === 'admin';
+            const isEditor = currentRole === 'editor';
+            const isRemoved = currentRole === 'removed' || currentRole === 'revoked';
+            const initials = (utente.name || '?').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
+            const roleLabel = isRemoved ? 'Accesso revocato' : isAdmin ? 'Proprietario' : isEditor ? 'Editor' : currentRole === 'viewer' ? 'Osservatore' : 'Partecipante';
+            const RoleIcon = isAdmin ? LuShieldCheck : isEditor ? LuPencil : LuEye;
+            return (
+              <li key={utente.id} className={`scrivania-member ${isRemoved ? 'is-revoked' : ''}`}>
+                <div className="scrivania-member-info">
+                  <span className="scrivania-member-avatar" aria-hidden="true">
+                    {utente.avatar_url ? <img src={utente.avatar_url} alt="" /> : initials}
                   </span>
-                )}
-              </div>
-              </div>
+                  <div className="scrivania-member-details">
+                    <div className="scrivania-member-name" title={utente.name}>
+                      <span>{utente.name}</span>
+                      {isMe && <span className="scrivania-member-self">Tu</span>}
+                    </div>
+                    <span className={`scrivania-member-role ${isEditor || isAdmin ? 'can-edit' : ''}`}>
+                      <RoleIcon size={12} aria-hidden="true" />{roleLabel}
+                    </span>
+                  </div>
+                </div>
 
-              {canManageMembers && !isMe && !isAdmin && (
-                <div className="flex items-center gap-2">
-                  {!isRemoved && (
+                {canManageMembers && !isMe && currentRole && !isAdmin && !isRemoved && (
+                  <div className="scrivania-member-actions">
                     <button
-                      className={`text-xs px-2 py-1 rounded border ${
-                        isEditor ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-300 text-gray-700'
-                      }`}
+                      type="button"
+                      className={`scrivania-member-permission ${isEditor ? 'is-editor' : ''}`}
+                      aria-pressed={isEditor}
+                      aria-label={`${isEditor ? 'Togli' : 'Consenti'} modifica scrivania ${isEditor ? 'a' : 'per'} ${utente.name}`}
+                      title={isEditor ? 'Può aggiungere, modificare e rimuovere carte' : 'Può solo osservare la scrivania'}
                       onClick={() => setMemberRole(utente.id, isEditor ? 'viewer' : 'editor')}
                     >
-                      {isEditor ? 'Editor ✓' : 'Viewer'}
+                      <LuPencil size={13} aria-hidden="true" />
+                      {isEditor ? 'Modifica attiva' : 'Consenti modifica'}
                     </button>
-                  )}
-
-                  <button
-                    className="text-xs px-2 py-1 rounded border border-red-300 text-red-700 bg-red-50"
-                    onClick={() => revokeMember(utente.id)}
-                  >
-                    Revoca
-                  </button>
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+                    <button
+                      type="button"
+                      className="scrivania-member-revoke"
+                      aria-label={`Revoca accesso a ${utente.name}`}
+                      onClick={() => revokeMember(utente.id)}
+                    >Revoca</button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <footer className="scrivania-members-footer">Uno spazio condiviso, in tempo reale.</footer>
+    </section>
   );
 };
 

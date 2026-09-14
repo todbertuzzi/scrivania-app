@@ -20,7 +20,7 @@ const CartaDraggable = ({
   onStartRotation,
   onStartScale,
   canWrite,
-  canSpawn,
+  canRemove,
   activeDeckId,
 }) => {
   const {
@@ -134,7 +134,7 @@ const CartaDraggable = ({
       {...attributes}
       {...listeners}
       onMouseDown={() => {
-        if (!canWrite && !canSpawn) return;
+        if (!canWrite && !canRemove) return;
         if (controlliVisibili !== carta.id) {
           setControlliVisibili(carta.id);
         }
@@ -159,12 +159,12 @@ const CartaDraggable = ({
         }}
         onClick={(e) => {
           e.stopPropagation();
-          if (!canWrite && !canSpawn) return;
+          if (!canWrite && !canRemove) return;
           setControlliVisibili(carta.id);
         }}
         className="relative"
       >
-        {controlliVisibili === carta.id && (canWrite || canSpawn) && (
+        {controlliVisibili === carta.id && (canWrite || canRemove) && (
           <CardControls
             carta={carta}
             onRimuovi={onRimuovi}
@@ -173,7 +173,7 @@ const CartaDraggable = ({
             handleGiraCarta={handleGiraCarta}
             cardRefs={cardRefs}
             canWrite={canWrite}
-            canSpawn={canSpawn}
+            canRemove={canRemove}
           />
         )}
 

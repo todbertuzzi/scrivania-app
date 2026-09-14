@@ -7,7 +7,7 @@ import {
   faToggleOn,
 } from "@fortawesome/free-solid-svg-icons";
 
-const CONTROL_BUTTON_CLASS = "flex h-9 w-9 items-center justify-center rounded-full bg-white shadow";
+const CONTROL_BUTTON_CLASS = "scrivania-card-control";
 
 const CardControls = ({
   carta,
@@ -17,14 +17,15 @@ const CardControls = ({
   handleGiraCarta,
   cardRefs,
   canWrite,
-  canSpawn,
+  canRemove,
 }) => {
   return (
     <>
       {/* Remove Button */}
-      {canSpawn && (
-        <div className="absolute top-[-1.5rem] left-[-1.5rem] z-30">
+      {canRemove && (
+        <div className="absolute top-[-14px] left-[-14px] z-30">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               onRimuovi(carta.id);
@@ -32,6 +33,7 @@ const CardControls = ({
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             className={CONTROL_BUTTON_CLASS}
+            aria-label="Rimuovi carta"
           >
             <FontAwesomeIcon icon={faXmark} className="text-red-500" />
           </button>
@@ -40,13 +42,15 @@ const CardControls = ({
 
       {/* Rotate Button */}
       {canWrite && (
-        <div className="absolute top-[-1.5rem] right-[-1.5rem] z-30">
+        <div className="absolute top-[-14px] right-[-14px] z-30">
           <button
+            type="button"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => onStartRotation(e, carta.id, carta.angle, cardRefs.current[carta.id])}
             style={{ cursor: "grab" }}
             onPointerDown={(e) => e.stopPropagation()}
             className={CONTROL_BUTTON_CLASS}
+            aria-label="Ruota carta"
           >
             <FontAwesomeIcon icon={faRotate} className="text-blue-500" />
           </button>
@@ -55,24 +59,26 @@ const CardControls = ({
 
       {/* Scale Button */}
       {canWrite && (
-        <div className="absolute bottom-[-1.5rem] right-[-1.5rem] z-30">
+        <div className="absolute bottom-[-14px] right-[-14px] z-30">
           <button
+            type="button"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => onStartScale(e, carta.id, carta.scale)}
             style={{ cursor: "ns-resize" }}
             onPointerDown={(e) => e.stopPropagation()}
-            className={`${CONTROL_BUTTON_CLASS} text-black`}
+            className={CONTROL_BUTTON_CLASS}
             aria-label="Ridimensiona carta"
           >
-            <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} />
+            <FontAwesomeIcon icon={faUpRightAndDownLeftFromCenter} className="scrivania-scale-icon" />
           </button>
         </div>
       )}
 
       {/* Toggle Front/Back Button */}
       {canWrite && (
-        <div className="absolute bottom-[-1.5rem] left-[-1.5rem] z-30">
+        <div className="absolute bottom-[-14px] left-[-14px] z-30">
           <button
+            type="button"
             onClick={(e) => {
               e.stopPropagation();
               handleGiraCarta(carta.id);

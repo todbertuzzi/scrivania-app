@@ -39,7 +39,7 @@ Non cambiare l'ID di un mazzo già usato: l'ID viene salvato nella sessione e re
 
 - Il mazzo viene scelto dal creatore quando prepara l'invito.
 - La sessione salva `impostazioni.mazzoId`; dopo la creazione il mazzo non può essere cambiato.
-- Solo il creatore può aggiungere o rimuovere carte. Un editor invitato può manipolare le carte già presenti.
+- Il creatore e gli editor invitati possono vedere il mazzo della sessione, aggiungere carte e manipolarle. Gli editor possono anche rimuovere carte; la gestione dei partecipanti resta riservata al creatore. Il passaggio a viewer nasconde il mazzo e disabilita le modifiche anche durante la sessione.
 - Il backend verifica nuovamente piano, nonce, ID del mazzo e permessi: i controlli non dipendono soltanto dall'interfaccia React.
 
 ## Verifica prima della pubblicazione
